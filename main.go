@@ -37,7 +37,7 @@ func main() {
 	// server.ListenAndServe()
 
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Minute)
 		err := attemptToSendPrompt(&queue)
 		if err != nil {
 			fmt.Println("Error", err)
@@ -49,7 +49,8 @@ func attemptToSendPrompt(queue *[]MensaQueue) error {
 	// Ping to Check if image generator is available at 10.20.0.20:8080
 	_, err := http.Get("http://10.20.0.20:8654")
 	if err != nil {
-		return err
+		// Return new error with the error message "image generator is not available"
+		return fmt.Errorf("image generator is not available: %w", err)
 	}
 
 	for _, queue_item := range *queue {
@@ -59,11 +60,10 @@ func attemptToSendPrompt(queue *[]MensaQueue) error {
 			return err
 		}
 		log.Println(string(t))
-		data, err := http.Post("http://10.20.0.20:8654/prompt", "application/json", bytes.NewBuffer(t))
+		_, err = http.Post("http://10.20.0.20:8654/prompt", "application/json", bytes.NewBuffer(t))
 		if err != nil {
 			return err
 		}
-		log.Println(data)
 		// remove the prompt from the queue
 		*queue = (*queue)[1:]
 	}
