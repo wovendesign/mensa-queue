@@ -133,15 +133,20 @@ func updateHelperInHomeassistant(queueLength int) error {
 
 	// Send a POST request to the Home Assistant API
 	// with the JSON object as the body
+	// and Bearer token as the Authorization header
 	t1, err := json.Marshal(t)
 	if err != nil {
 		log.Println("Error marshalling JSON")
 		return err
 	}
-	_, err = http.Post("http://homeassistant.local:8123/api/states/input_number.numbers_in_mensa_image_queue", "application/json", bytes.NewBuffer(t1))
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "http://homeassistant.local:8123/api/states/input_number.numbers_in_mensa_image_queue", bytes.NewBuffer(t1))
+	req.Header.Set("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJlODY4NDAxYTI1ZTM0MDUzODk5YTg2M2JiMmM5Y2UzMiIsImlhdCI6MTY1MTk0NzY0MywiZXhwIjoxOTY3MzA3NjQzfQ.dSfb-BfyJDmpKDZc_pLYF_6bZbNdNbVtTtHglsCGJZw")
+	_, err = client.Do(req)
 	if err != nil {
-		log.Println("Error sending POST request to Home Assistant")
+		log.Println("Error sending POST request")
 		return err
 	}
+
 	return nil
 }
