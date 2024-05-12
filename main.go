@@ -37,9 +37,12 @@ func main() {
 	// server.ListenAndServe()
 
 	for {
-		time.Sleep(5 * time.Minute)
+		time.Sleep(5 * time.Second)
 		err := attemptToSendPrompt(&queue)
 		if err != nil {
+			if err.Error() == "image generator is not available" {
+				continue
+			}
 			fmt.Println("Error", err)
 		}
 	}
@@ -50,7 +53,7 @@ func attemptToSendPrompt(queue *[]MensaQueue) error {
 	_, err := http.Get("http://10.20.0.20:8654")
 	if err != nil {
 		// Return new error with the error message "image generator is not available"
-		return fmt.Errorf("image generator is not available: %w", err)
+		return fmt.Errorf("image generator is not available")
 	}
 
 	for _, queue_item := range *queue {
@@ -108,6 +111,10 @@ func getRoot(w http.ResponseWriter, req *http.Request, queue *[]MensaQueue) {
 
 	// add the new title to the list
 	*queue = append(*queue, t)
+
+	// log "New Prompt added. Total Prompts: <number of prompts in the list>
+	log.Println("New Prompt added. Total Prompts:", len(*queue))
+
 	// return 200 OK
 	w.WriteHeader(http.StatusOK)
 }
