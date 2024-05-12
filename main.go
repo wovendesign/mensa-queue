@@ -114,7 +114,34 @@ func getRoot(w http.ResponseWriter, req *http.Request, queue *[]MensaQueue) {
 
 	// log "New Prompt added. Total Prompts: <number of prompts in the list>
 	log.Println("New Prompt added. Total Prompts:", len(*queue))
+	updateHelperInHomeassistant(len(*queue))
 
 	// return 200 OK
 	w.WriteHeader(http.StatusOK)
+}
+
+func updateHelperInHomeassistant(queueLength int) error {
+	// Update the helper in Home Assistant
+	// homeassistant.local:8123/api/states/input_number.numbers_in_mensa_image_queue
+
+	// Create a JSON object with the new queue length
+	t := struct {
+		State string `json:"state"`
+	}{
+		State: fmt.Sprintf("%d", queueLength),
+	}
+
+	// Send a POST request to the Home Assistant API
+	// with the JSON object as the body
+	t1, err := json.Marshal(t)
+	if err != nil {
+		log.Println("Error marshalling JSON")
+		return err
+	}
+	_, err = http.Post("http://homeassistant.local:8123/api/states/input_number.numbers_in_mensa_image_queue", "application/json", bytes.NewBuffer(t1))
+	if err != nil {
+		log.Println("Error sending POST request to Home Assistant")
+		return err
+	}
+	return nil
 }
