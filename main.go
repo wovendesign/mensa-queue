@@ -144,7 +144,7 @@ func updateHelperInHomeassistant(queueLength int) error {
 	req.Header.Set("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJlODY4NDAxYTI1ZTM0MDUzODk5YTg2M2JiMmM5Y2UzMiIsImlhdCI6MTY1MTk0NzY0MywiZXhwIjoxOTY3MzA3NjQzfQ.dSfb-BfyJDmpKDZc_pLYF_6bZbNdNbVtTtHglsCGJZw")
 	_, err = client.Do(req)
 	if err != nil {
-		log.Println("Error sending POST request")
+		log.Println(err)
 		return err
 	}
 
