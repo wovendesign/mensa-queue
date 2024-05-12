@@ -140,7 +140,7 @@ func updateHelperInHomeassistant(queueLength int) error {
 		return err
 	}
 	client := &http.Client{}
-	req, _ := http.NewRequest("POST", "http://homeassistant.local:8123/api/states/input_number.numbers_in_mensa_image_queue", bytes.NewBuffer(t1))
+	req, _ := http.NewRequest("POST", "http://10.20.0.31:8123/api/states/input_number.numbers_in_mensa_image_queue", bytes.NewBuffer(t1))
 	req.Header.Set("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJlODY4NDAxYTI1ZTM0MDUzODk5YTg2M2JiMmM5Y2UzMiIsImlhdCI6MTY1MTk0NzY0MywiZXhwIjoxOTY3MzA3NjQzfQ.dSfb-BfyJDmpKDZc_pLYF_6bZbNdNbVtTtHglsCGJZw")
 	_, err = client.Do(req)
 	if err != nil {
