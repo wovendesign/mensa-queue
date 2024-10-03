@@ -26,9 +26,9 @@ func main() {
 	}
 	for _, week := range *foodContent {
 		for _, food := range week.SpeiseplanGerichtData {
-			fmt.Println()
-			fmt.Println()
-			fmt.Printf("%+v\n", food)
+			// fmt.Println()
+			// fmt.Println()
+			// fmt.Printf("%+v\n", food)
 
 			nutrients, err := parsers.ExtractNutrients(food)
 			if err != nil {
@@ -36,11 +36,23 @@ func main() {
 				return
 			}
 
-			recipe := payload.Recipe{
-				Title: food.SpeiseplanAdvancedGericht.RecipeName,
-				PriceStudents: &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
-				PriceGuests: &food.Zusatzinformationen.GaestepreisDecimal2,
-				Diet: payload.DietMeat,
+			recipe := payload.LocalRecipe{
+				Locales: []payload.RecipesLocales{
+					{
+						Title: food.SpeiseplanAdvancedGericht.RecipeName,
+						Locale: "de",
+					},
+					{
+						Title: food.Zusatzinformationen.GerichtnameAlternative,
+						Locale: "en",
+					},
+				},
+				Recipe: payload.Recipe{
+					PriceStudents: &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
+					PriceGuests: &food.Zusatzinformationen.GaestepreisDecimal2,
+					Diet: payload.DietMeat,
+					MensaProvider: 1,
+				},
 				Nutrients: nutrients,
 			}
 

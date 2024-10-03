@@ -18,17 +18,20 @@ const (
 	DietFish       Diet = "fish"
 )
 
+type LocalRecipe struct {
+	Locales []RecipesLocales
+	Additive       *[]Additive
+	Nutrients      *[]Nutrient
+	Recipe 	   Recipe
+}
+
 type Recipe struct {
 	ID             uint `gorm:"primaryKey"`
-	Title          string
 	Diet           Diet
 	PriceStudents  *float64
 	PriceEmployees *float64
 	PriceGuests    *float64
-	Nutrients      *[]Nutrient
 	MensaProvider  int64       `gorm:"column:mensa_provider_id"`
-	Additive       *[]Additive `gorm:"many2many:recipe_rels;"`
-	AllergensID       *[]Allergen `gorm:"many2many:recipe_rels;"`
 }
 
 type RecipesRel struct {
@@ -37,6 +40,13 @@ type RecipesRel struct {
 	Path string
 	AdditivesID *uint `gorm:"column:additives_id"`
 	AllergensID *uint `gorm:"column:allergens_id"`
+}
+
+type RecipesLocales struct {
+	ID uint `gorm:"primaryKey"`
+	Title string `gorm:"column:title"`
+	Locale string `gorm:"column:_locale"`
+	RecipeID uint `gorm:"column:_parent_id"`
 }
 
 type Additive struct {
@@ -77,7 +87,7 @@ type NutrientUnit struct {
 	Name string `gorm:"unique"`
 }
 
-func InsertRecipe(recipe Recipe) {
+func InsertRecipe(recipe LocalRecipe) {
 	// Database connection
 	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -85,29 +95,51 @@ func InsertRecipe(recipe Recipe) {
 		panic("failed to connect database")
 	}
 
+	if len(recipe.Locales) == 0 {
+		fmt.Println("No locales provided")
+		return
+	}
+
 	// Check if recipe already exists
 	// (Title and MensaProvider are unique together)
 	// If it does not exist, insert it
 	nutrients := recipe.Nutrients
-	recipe.Nutrients = nil
+
+
+	// var title RecipesLocales
+	var count RecipesLocales
+	db.FirstOrInit(&count, recipe.Locales[0])
+
+	fmt.Printf("%+v\n", count)
 
 
 
-	if err := db.Where(Recipe{
-		Title: recipe.Title,
-		MensaProvider: 1,
-	}).Assign(Recipe{
-		Diet: recipe.Diet,
-		PriceStudents: recipe.PriceStudents,
-		PriceEmployees: recipe.PriceEmployees,
-		PriceGuests: recipe.PriceGuests,
-	}).FirstOrCreate(&recipe).Error; err != nil {
-		fmt.Println("Error inserting recipe:", err)
-		panic(err)
+	if count.ID == 0 {
+		// Create Recipe without title
+		if err := db.Create(&recipe.Recipe).Error; err != nil {
+			fmt.Println("Error inserting recipe:", err)
+			panic(err)
+		}
+	} else {
+		if err := db.Where(Recipe{
+			ID: count.RecipeID,
+			MensaProvider: 1,
+		}).Assign(recipe.Recipe).FirstOrCreate(&recipe.Recipe).Error; err != nil {
+			fmt.Println("Error inserting recipe:", err)
+			panic(err)
+		}
+	}
+
+	for _ , locale := range recipe.Locales {
+		locale.RecipeID = recipe.Recipe.ID
+		if err := db.FirstOrCreate(&locale, locale).Error; err != nil {
+			fmt.Println("Error inserting locale:", err)
+			panic(err)
+		}
 	}
 
 	for _, nutrient := range *nutrients {
-		nutrient.RecipeID = recipe.ID
+		nutrient.RecipeID = recipe.Recipe.ID
 		_, err := insertNutrient(nutrient, db)
 		if err != nil {
 			fmt.Println("Error inserting nutrient:", err)
@@ -115,7 +147,7 @@ func InsertRecipe(recipe Recipe) {
 		}
 	}
 
-	fmt.Println("Recipe inserted successfully", recipe.ID)
+	fmt.Println("Recipe inserted successfully", recipe.Recipe.ID)
 }
 
 func insertNutrient(nutrient Nutrient, db *gorm.DB) (*Nutrient, error) {
