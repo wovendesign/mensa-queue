@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	parsers "mensa-queue/internal"
+	"mensa-queue/internal/payload"
+
 	"net/http"
 	"time"
 )
@@ -16,28 +19,43 @@ type MensaQueue struct {
 }
 
 func main() {
-	queue := []MensaQueue{}
 
-	router := http.NewServeMux()
-	router.HandleFunc("POST /prompt", func(w http.ResponseWriter, req *http.Request) {
-		getRoot(w, req, &queue)
-	})
+	foodContent, err := parsers.ParsePotsdamMensaData()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, week := range *foodContent {
+		for _, food := range week.SpeiseplanGerichtData {
+			fmt.Println()
+			fmt.Println()
+			fmt.Printf("%+v\n", food)
 
-	server := http.Server{
-		Addr:    ":3333",
-		Handler: router,
+			nutrients, err := parsers.ExtractNutrients(food)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+
+			recipe := payload.Recipe{
+				Title: food.SpeiseplanAdvancedGericht.RecipeName,
+				PriceStudents: &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
+				PriceGuests: &food.Zusatzinformationen.GaestepreisDecimal2,
+				Diet: payload.DietMeat,
+				Nutrients: nutrients,
+			}
+
+			payload.InsertRecipe(recipe)
+
+		}
 	}
 
-	go func() {
-		fmt.Println("Server is running on port 3333")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("ListenAndServe(): %s", err)
-		}
-	}()
-	// server.ListenAndServe()
+}
+
+func handleAIQueue() {
+	queue := []MensaQueue{}
 
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(60 * time.Second)
 		err := attemptToSendPrompt(&queue)
 		if err != nil {
 			if err.Error() == "image generator is not available" {
