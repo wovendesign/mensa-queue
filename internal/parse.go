@@ -173,10 +173,6 @@ type AllergensContent struct {
 	TimestampLog string        `json:"timestampLog"`
 }
 
-type FeatureResponse struct {
-	Success bool             `json:"success"`
-	Content []FeatureContent `json:"content"`
-}
 
 type FeatureContent struct {
 	ID                     int64         `json:"id"`
@@ -465,7 +461,50 @@ func ParseAdditives() (map[int64]LocalizedString, error) {
 	return additives, nil
 }
 
+type FeatureResponse struct {
+	ID int64 `json:"gerichtmerkmalID"`
+	Name string `json:"name"`
+}
 
+func ParseFeatures() (map[int64]LocalizedString, error) {
+	featuresENResponse, err := sendRequestToSWT(FeaturesModel, NeuesPalais, EN)
+	if err != nil {
+		return nil, err
+	}
+	featuresDEResponse, err := sendRequestToSWT(FeaturesModel, NeuesPalais, DE)
+	if err != nil {
+		return nil, err
+	}
+
+	var featuresEN SWTResponse[FeatureResponse]
+	err = json.Unmarshal(featuresENResponse, &featuresEN)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	var featuresDE SWTResponse[FeatureResponse]
+	err = json.Unmarshal(featuresDEResponse, &featuresDE)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	features := make(map[int64]LocalizedString)
+
+	for _, feature := range featuresEN.Content {
+		features[feature.ID] = LocalizedString{
+			ValueEN: &feature.Name,
+		}
+	}
+
+	for _, feature := range featuresDE.Content {
+		features[feature.ID] = LocalizedString{
+			ValueEN: features[feature.ID].ValueEN,
+			ValueDE: &feature.Name,
+		}
+	}
+
+	return features, nil
+}
 
 func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]string) (*[]payload.Additive, error) {
 	if len(*food.AdditivesIDsString) == 0 {

@@ -18,8 +18,9 @@ type MensaQueue struct {
 	FoodTitle *string `json:"prompt"`
 }
 
+
 func main() {
-	additives, err := parsers.ParseAdditives(parsers.AllergensModel)
+	additives, err := parsers.ParseFeatures()
 	if err != nil {
 		log.Fatal(err)
 		return
