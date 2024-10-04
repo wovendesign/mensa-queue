@@ -43,6 +43,13 @@ func main() {
 				return
 			}
 
+			additiveMap, err := parsers.ParseAdditives()
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			additives, err := parsers.ExtractAdditives(food, additiveMap)
+
 			recipe := payload.LocalRecipe{
 				Locales: []payload.RecipesLocales{
 					{
@@ -61,6 +68,8 @@ func main() {
 					MensaProvider: 1,
 				},
 				Nutrients: nutrients,
+				// Allergen: &food.Zusatzinformationen.Allergene,
+				Additives: additives,
 			}
 
 			payload.InsertRecipe(recipe)

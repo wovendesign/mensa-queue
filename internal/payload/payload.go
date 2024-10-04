@@ -36,7 +36,8 @@ type LocalNutrient struct {
 
 type LocalRecipe struct {
 	Locales []RecipesLocales
-	Additive       *[]Additive
+	Allergen       *[][]AllergensLocale
+	Additives      *[][]AdditivesLocale
 	Nutrients      *[]LocalNutrient
 	Recipe 	   Recipe
 }
@@ -69,7 +70,7 @@ type Additive struct {
 	ID   uint `gorm:"primaryKey"`
 }
 
-type AdditiveLocale struct {
+type AdditivesLocale struct {
 	ID uint `gorm:"primaryKey"`
 	Name string `gorm:"column:name"`
 	Locale string `gorm:"column:_locale"`
@@ -80,7 +81,7 @@ type Allergen struct {
 	ID   uint `gorm:"primaryKey"`
 }
 
-type AllergenLocale struct {
+type AllergensLocale struct {
 	ID uint `gorm:"primaryKey"`
 	Name string `gorm:"column:name"`
 	Locale string `gorm:"column:_locale"`
@@ -137,8 +138,6 @@ func InsertRecipe(recipe LocalRecipe) {
 	// Check if recipe already exists
 	// (Title and MensaProvider are unique together)
 	// If it does not exist, insert it
-	nutrients := recipe.Nutrients
-
 	var count RecipesLocales
 	db.FirstOrInit(&count, recipe.Locales[0])
 
@@ -166,12 +165,32 @@ func InsertRecipe(recipe LocalRecipe) {
 		}
 	}
 
-	for _, nutrient := range *nutrients {
+	for _, nutrient := range *recipe.Nutrients {
 		nutrient.Nutrient.RecipeID = recipe.Recipe.ID
 		_, err := insertNutrient(nutrient.Nutrient, nutrient.Name, db)
 		if err != nil {
 			fmt.Println("Error inserting nutrient:", err)
 			panic(err)
+		}
+	}
+
+	if (recipe.Allergen != nil) {
+		for _, allergens := range *recipe.Allergen {
+			_, err := insertAllergen(allergens, recipe.Recipe, db)
+			if err != nil {
+				fmt.Println("Error inserting allergen:", err)
+				panic(err)
+			}
+		}
+	}
+
+	if (recipe.Additives != nil) {
+		for _, additives := range *recipe.Additives {
+			_, err := insertAdditive(additives, recipe.Recipe, db)
+			if err != nil {
+				fmt.Println("Error inserting additive:", err)
+				panic(err)
+			}
 		}
 	}
 
@@ -234,7 +253,6 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutr
 			return nil, err
 		}
 	} else {
-		fmt.Printf("Got an else here, deId: %s, ENId: %s\n\n", nameDE.ID, nameEN.ID)
 		if err := db.Where(NutrientLabel{
 			ID: nameDE.NutrientLabelID,
 		}).First(&nutrientLabel).Error; err != nil {
@@ -253,17 +271,15 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutr
 	return &nutrient, nil
 }
 
-func insertAllergen(allergen Allergen, name LocalizedString, recipe Recipe, db *gorm.DB) (*Allergen, error) {
-	localAllergenDE := AllergenLocale{
-		Name: name.ValueDE,
-	}
-	var nameDE AllergenLocale
+func insertAllergen(allergens []AllergensLocale, recipe Recipe, db *gorm.DB) (*Allergen, error) {
+	localAllergenDE := allergens[0]
+	var nameDE AllergensLocale
 	db.FirstOrInit(&nameDE, localAllergenDE)
-	localAllergenEN := AllergenLocale{
-		Name: name.ValueEN,
-	}
-	var nameEN AllergenLocale
+	localAllergenEN := allergens[1]
+	var nameEN AllergensLocale
 	db.FirstOrInit(&nameEN, localAllergenEN)
+
+	var allergen Allergen
 
 	if nameDE.ID == 0 {
 		// Create Recipe without title
@@ -274,13 +290,19 @@ func insertAllergen(allergen Allergen, name LocalizedString, recipe Recipe, db *
 
 		// Create Locales
 		nameDE.AllergenID = allergen.ID
-		if err := db.Create(nameDE).Error; err != nil {
+		if err := db.Create(&nameDE).Error; err != nil {
 			fmt.Println("Error inserting allergen:", err)
 			return nil, err
 		}
 		nameEN.AllergenID = allergen.ID
-		if err := db.Create(nameEN).Error; err != nil {
+		if err := db.Create(&nameEN).Error; err != nil {
 			fmt.Println("Error inserting allergen:", err)
+			return nil, err
+		}
+	} else {
+		if err := db.Where(Allergen{
+			ID: nameDE.AllergenID,
+		}).First(&allergen).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -300,23 +322,53 @@ func insertAllergen(allergen Allergen, name LocalizedString, recipe Recipe, db *
 	return &allergen, nil
 }
 
-func insertAdditive(additive Additive, name LocalizedString, recipe Recipe, db *gorm.DB) (*Additive, error) {
-	if err := db.FirstOrCreate(&additive, additive).Error; err != nil {
-		fmt.Println("Error inserting additive:", err)
-		return nil, err
+func insertAdditive(additive []AdditivesLocale, recipe Recipe, db *gorm.DB) (*Additive, error) {
+	localAdditiveDE := additive[0]
+	var nameDE AdditivesLocale
+	db.FirstOrInit(&nameDE, localAdditiveDE)
+	localAdditiveEN := additive[1]
+	var nameEN AdditivesLocale
+	db.FirstOrInit(&nameEN, localAdditiveEN)
+
+	var additiveModel Additive
+
+	if nameDE.ID == 0 {
+		// Create Recipe without title
+		if err := db.Create(&additiveModel).Error; err != nil {
+			fmt.Println("Error inserting additive:", err)
+			return nil, err
+		}
+
+		// Create Locales
+		nameDE.AdditiveID = additiveModel.ID
+		if err := db.Create(&nameDE).Error; err != nil {
+			fmt.Println("Error inserting additive:", err)
+			return nil, err
+		}
+		nameEN.AdditiveID = additiveModel.ID
+		if err := db.Create(&nameEN).Error; err != nil {
+			fmt.Println("Error inserting additive:", err)
+			return nil, err
+		}
+	} else {
+		if err := db.Where(Additive{
+			ID: nameDE.AdditiveID,
+		}).First(&additiveModel).Error; err != nil {
+			return nil, err
+		}
 	}
-	fmt.Println(name)
-	// Attach the additives to the recipe using the association method
+
+	// Attach the additive to the recipe using the association method
 	rel := RecipesRel{
 		ParentID: recipe.ID,
 		Path: "additives",
 		AllergensID: nil,
-		AdditivesID: &additive.ID,
+		AdditivesID: &additiveModel.ID,
 	}
 	if err := db.Create(&rel).Error; err != nil {
 		fmt.Println("Error inserting recipe additive:", err)
 		return nil, err
 	}
 
-	return &additive, nil
+	return &additiveModel, nil
 }

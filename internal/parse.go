@@ -528,13 +528,13 @@ func ParseFeatures() (map[int64]payload.LocalizedString, error) {
 	return features, nil
 }
 
-func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditiveLocale, error) {
-	if len(*food.AdditivesIDsString) == 0 {
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditivesLocale, error) {
+	if food.AdditivesIDsString == nil || len(*food.AdditivesIDsString) == 0 {
 		return nil, nil
 	}
 	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
 
-	var result [][]payload.AdditiveLocale
+	var result [][]payload.AdditivesLocale
 
 	for _, additiveID := range additivesArray {
 		additiveIDInt, err := strconv.Atoi(additiveID)
@@ -542,12 +542,12 @@ func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.L
 			return nil, fmt.Errorf("error parsing additive ID: %w", err)
 		}
 
-		var additivePair []payload.AdditiveLocale
-		additivePair = append(additivePair, payload.AdditiveLocale{
+		var additivePair []payload.AdditivesLocale
+		additivePair = append(additivePair, payload.AdditivesLocale{
 			Name: additives[int64(additiveIDInt)].ValueDE,
 			Locale: "de",
 		})
-		additivePair = append(additivePair, payload.AdditiveLocale{
+		additivePair = append(additivePair, payload.AdditivesLocale{
 			Name: additives[int64(additiveIDInt)].ValueEN,
 			Locale: "en",
 		})
