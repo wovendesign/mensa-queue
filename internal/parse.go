@@ -311,98 +311,125 @@ func GetMealCategory() (*[]MealCategory, error) {
 	return &mealCategoryResponse.Content, nil
 }
 
-func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.Nutrient, error) {
-	nutrients := make([]payload.Nutrient, 0)
+func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, error) {
+	nutrients := make([]payload.LocalNutrient, 0)
 
-	// NwkcalInteger: 923,
- //        NwfettDecimal1: 53.33,
- //        NwfettsaeurenDecimal1: 14.67,
- //        NwkohlehydrateDecimal1: 21.82,
- //        NwzuckerDecimal1: 6.49,
- //        NweiweissDecimal1: 49.58,
- //        NwsalzDecimal1: 7.63,
-
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Kilokalorien",
-			Unit: payload.NutrientUnit{
-				Name: "kcal",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "kcal",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwkcalInteger),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwkcalInteger),
+		Name: payload.LocalizedString {
+			ValueDE: "Kalorien",
+			ValueEN: "Calories",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Fett",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwfettDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwfettDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Fett",
+			ValueEN: "Fat",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Fettsäuren",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwfettsaeurenDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwfettsaeurenDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Gesättigte Fettsäuren",
+			ValueEN: "Saturated Fatty Acids",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Kohlenhydrate",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwkohlehydrateDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwkohlehydrateDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Kohlenhydrate",
+			ValueEN: "Carbohydrates",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Zucker",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwzuckerDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwzuckerDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Zucker",
+			ValueEN: "Sugar",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Eiweiß",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NweiweissDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NweiweissDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Eiweiß",
+			ValueEN: "Protein",
 		},
 	})
 
-	nutrients = append(nutrients, payload.Nutrient{
-		NutrientLabel: payload.NutrientLabel{
-			Name: "Salz",
-			Unit: payload.NutrientUnit{
-				Name: "g",
+	nutrients = append(nutrients, payload.LocalNutrient{
+		Nutrient: payload.Nutrient{
+			NutrientLabel: payload.NutrientLabel{
+				Unit: payload.NutrientUnit{
+					Name: "g",
+				},
+			},
+			NutrientValue: payload.NutrientValue{
+				Value: float64(food.Zusatzinformationen.NwsalzDecimal1),
 			},
 		},
-		NutrientValue: payload.NutrientValue{
-			Value: float64(food.Zusatzinformationen.NwsalzDecimal1),
+		Name: payload.LocalizedString {
+			ValueDE: "Salz",
+			ValueEN: "Salt",
 		},
 	})
 
@@ -410,17 +437,12 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.Nutrient, error) 
 }
 
 
-type LocalizedString struct {
-	ValueDE *string
-	ValueEN *string
-}
-
 type AdditiveResponse struct {
 	ID int64 `json:"zusatzstoffeID"`
 	Name string `json:"name"`
 }
 
-func ParseAdditives() (map[int64]LocalizedString, error) {
+func ParseAdditives() (map[int64]payload.LocalizedString, error) {
 	additivesENResponse, err := sendRequestToSWT(AdditivesModel, NeuesPalais, EN)
 	if err != nil {
 		return nil, err
@@ -443,18 +465,18 @@ func ParseAdditives() (map[int64]LocalizedString, error) {
 		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
 
-	additives := make(map[int64]LocalizedString)
+	additives := make(map[int64]payload.LocalizedString)
 
 	for _, add := range additivesEN.Content {
-		additives[add.ID] = LocalizedString{
-			ValueEN: &add.Name,
+		additives[add.ID] = payload.LocalizedString{
+			ValueEN: add.Name,
 		}
 	}
 
 	for _, add := range additivesDE.Content {
-		additives[add.ID] = LocalizedString{
+		additives[add.ID] = payload.LocalizedString{
 			ValueEN: additives[add.ID].ValueEN,
-			ValueDE: &add.Name,
+			ValueDE: add.Name,
 		}
 	}
 
@@ -466,7 +488,7 @@ type FeatureResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseFeatures() (map[int64]LocalizedString, error) {
+func ParseFeatures() (map[int64]payload.LocalizedString, error) {
 	featuresENResponse, err := sendRequestToSWT(FeaturesModel, NeuesPalais, EN)
 	if err != nil {
 		return nil, err
@@ -488,41 +510,49 @@ func ParseFeatures() (map[int64]LocalizedString, error) {
 		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
 
-	features := make(map[int64]LocalizedString)
+	features := make(map[int64]payload.LocalizedString)
 
 	for _, feature := range featuresEN.Content {
-		features[feature.ID] = LocalizedString{
-			ValueEN: &feature.Name,
+		features[feature.ID] = payload.LocalizedString{
+			ValueEN: feature.Name,
 		}
 	}
 
 	for _, feature := range featuresDE.Content {
-		features[feature.ID] = LocalizedString{
+		features[feature.ID] = payload.LocalizedString{
 			ValueEN: features[feature.ID].ValueEN,
-			ValueDE: &feature.Name,
+			ValueDE: feature.Name,
 		}
 	}
 
 	return features, nil
 }
 
-func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]string) (*[]payload.Additive, error) {
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditiveLocale, error) {
 	if len(*food.AdditivesIDsString) == 0 {
 		return nil, nil
 	}
 	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
 
-	var result []payload.Additive
+	var result [][]payload.AdditiveLocale
 
 	for _, additiveID := range additivesArray {
 		additiveIDInt, err := strconv.Atoi(additiveID)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing additive ID: %w", err)
 		}
-		newAdditive := additives[int64(additiveIDInt)]
-		result = append(result, payload.Additive{
-			Name: newAdditive,
+
+		var additivePair []payload.AdditiveLocale
+		additivePair = append(additivePair, payload.AdditiveLocale{
+			Name: additives[int64(additiveIDInt)].ValueDE,
+			Locale: "de",
 		})
+		additivePair = append(additivePair, payload.AdditiveLocale{
+			Name: additives[int64(additiveIDInt)].ValueEN,
+			Locale: "en",
+		})
+
+		result = append(result, additivePair)
 	}
 
 	return &result, nil
