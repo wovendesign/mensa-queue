@@ -2,6 +2,7 @@ package payload
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,6 +17,14 @@ const (
 	DietVegetarian Diet = "vegetarian"
 	DietMeat       Diet = "meat"
 	DietFish       Diet = "fish"
+)
+
+type Mensa int
+const (
+	NeuesPalais Mensa = 9600
+	Golm Mensa = 9601
+	Teltow Mensa = 9602
+	Griebnitzsee Mensa = 9603
 )
 
 
@@ -122,7 +131,7 @@ type NutrientUnit struct {
 	Name string `gorm:"unique"`
 }
 
-func InsertRecipe(recipe LocalRecipe) {
+func InsertRecipe(recipe LocalRecipe, date time.Time) {
 	// Database connection
 	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -195,6 +204,43 @@ func InsertRecipe(recipe LocalRecipe) {
 	}
 
 	fmt.Println("Recipe inserted successfully", recipe.Recipe.ID)
+
+	InsertServing(date, NeuesPalais, recipe.Recipe.ID, db)
+}
+
+type Serving struct {
+	ID 	  uint `gorm:"primaryKey"`
+	Date  time.Time
+	MensaID uint `gorm:"column:mensa_id"`
+	RecipeID uint `gorm:"column:recipe_id"`
+}
+
+func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
+	fmt.Printf("Inserting serving for %v on %s for recipe%d\n", mensa, date, recipeID)
+	mensaMap := map[Mensa]uint{
+		NeuesPalais: 1,
+	}
+
+	serving := Serving{
+		Date: date,
+		MensaID: mensaMap[mensa],
+		RecipeID: recipeID,
+	}
+
+	fmt.Println("%v", serving)
+
+	// Check if serving already exists
+	var count Serving
+	db.FirstOrInit(&count, serving)
+
+	if count.ID == 0 {
+		err := db.Create(&serving).Error
+		if err != nil {
+			fmt.Println("Error inserting serving:", err)
+			panic(err)
+		}
+	}
+	fmt.Printf("Serving inserted successfully: %d\n", serving.ID)
 }
 
 func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutrient, error) {

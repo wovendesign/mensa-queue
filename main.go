@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	parsers "mensa-queue/internal"
+	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 
 	"net/http"
@@ -21,20 +21,24 @@ type MensaQueue struct {
 
 
 func main() {
-	// additives, err := parsers.ParseFeatures()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
-
 	foodContent, err := parsers.ParsePotsdamMensaData()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	additiveMap, err := parsers.ParseAdditives()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	allergenMap, err := parsers.ParseAllergens()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 	for _, week := range *foodContent {
 		for _, food := range week.SpeiseplanGerichtData {
-			// fmt.Println()
-			// fmt.Println()
 			// fmt.Printf("%+v\n", food)
 
 			nutrients, err := parsers.ExtractNutrients(food)
@@ -43,12 +47,14 @@ func main() {
 				return
 			}
 
-			additiveMap, err := parsers.ParseAdditives()
+			additives, err := parsers.ExtractAdditives(food, additiveMap)
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
-			additives, err := parsers.ExtractAdditives(food, additiveMap)
+
+
+			allergens, err := parsers.ExtractAllergens(food, allergenMap)
 
 			recipe := payload.LocalRecipe{
 				Locales: []payload.RecipesLocales{
@@ -68,11 +74,18 @@ func main() {
 					MensaProvider: 1,
 				},
 				Nutrients: nutrients,
-				// Allergen: &food.Zusatzinformationen.Allergene,
+				Allergen: allergens,
 				Additives: additives,
 			}
 
-			payload.InsertRecipe(recipe)
+			t, err := time.Parse(time.RFC3339, food.SpeiseplanAdvancedGericht.Date)
+			if err != nil {
+				fmt.Println("Error parsing time:", err)
+				return
+			}
+			fmt.Println(t)
+
+			payload.InsertRecipe(recipe, t)
 
 		}
 	}

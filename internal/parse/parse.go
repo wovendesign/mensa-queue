@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"mensa-queue/internal/payload"
+
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,14 +17,6 @@ const (
 	EN
 )
 
-type Mensa int
-const (
-	NeuesPalais Mensa = 9600
-	Golm Mensa = 9601
-	Teltow Mensa = 9602
-	Griebnitzsee Mensa = 9603
-)
-
 type Model string
 const (
 	AdditivesModel Model = "additives"
@@ -33,7 +26,7 @@ const (
 	CategoryModel Model = "mealCategory"
 )
 
-func sendRequestToSWT(model Model, mensa Mensa, languageType Language) ([]byte, error) {
+func sendRequestToSWT(model Model, mensa payload.Mensa, languageType Language) ([]byte, error) {
 	client := &http.Client{}
 	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
 	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
@@ -167,10 +160,7 @@ type AllergensResponse struct {
 type AllergensContent struct {
 	ID           int64         `json:"id"`
 	Name         string        `json:"name"`
-	Kuerzel      string        `json:"kuerzel"`
-	LogoImage    json.RawMessage `json:"logoImage"`
 	AllergeneID  int64         `json:"allergeneID"`
-	TimestampLog string        `json:"timestampLog"`
 }
 
 
@@ -266,7 +256,7 @@ type FeatureList struct {
 
 
 func ParsePotsdamMensaData() (*[]FoodContent, error) {
-    body, err := sendRequestToSWT(FoodModel, NeuesPalais, DE)
+    body, err := sendRequestToSWT(FoodModel, payload.NeuesPalais, DE)
     if err != nil {
     	return nil, err
     }
@@ -294,7 +284,7 @@ type MealCategory struct {
 }
 
 func GetMealCategory() (*[]MealCategory, error) {
-	body, err := sendRequestToSWT(CategoryModel, NeuesPalais, DE)
+	body, err := sendRequestToSWT(CategoryModel, payload.NeuesPalais, DE)
 
 	var mealCategoryResponse MealCategoryResponse
 
@@ -438,12 +428,12 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 
 
 type AdditiveResponse struct {
-	ID int64 `json:"zusatzstoffeID"`
+	ID int64 `json:"allergeneID"`
 	Name string `json:"name"`
 }
 
 func ParseAdditives() (map[int64]payload.LocalizedString, error) {
-	additivesENResponse, err := sendRequestToSWT(AdditivesModel, NeuesPalais, EN)
+	additivesENResponse, err := sendRequestToSWT(AdditivesModel, payload.NeuesPalais, EN)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +444,7 @@ func ParseAdditives() (map[int64]payload.LocalizedString, error) {
 		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
 
-	additivesDEResponse, err := sendRequestToSWT(AdditivesModel, NeuesPalais, DE)
+	additivesDEResponse, err := sendRequestToSWT(AdditivesModel, payload.NeuesPalais, DE)
 	if err != nil {
 		return nil, err
 	}
@@ -483,17 +473,123 @@ func ParseAdditives() (map[int64]payload.LocalizedString, error) {
 	return additives, nil
 }
 
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditivesLocale, error) {
+	if food.AdditivesIDsString == nil || len(*food.AdditivesIDsString) == 0 {
+		return nil, nil
+	}
+	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
+
+	var result [][]payload.AdditivesLocale
+
+	for _, additiveID := range additivesArray {
+		additiveIDInt, err := strconv.Atoi(additiveID)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing additive ID: %w", err)
+		}
+
+		var additivePair []payload.AdditivesLocale
+		additivePair = append(additivePair, payload.AdditivesLocale{
+			Name: additives[int64(additiveIDInt)].ValueDE,
+			Locale: "de",
+		})
+		additivePair = append(additivePair, payload.AdditivesLocale{
+			Name: additives[int64(additiveIDInt)].ValueEN,
+			Locale: "en",
+		})
+
+		result = append(result, additivePair)
+	}
+
+	return &result, nil
+}
+
+type AllergenResponse struct {
+	ID int64 `json:"allergeneID"`
+	Name string `json:"name"`
+}
+
+func ParseAllergens() (map[int64]payload.LocalizedString, error) {
+	allergensENResponse, err := sendRequestToSWT(AllergensModel, payload.NeuesPalais, EN)
+	if err != nil {
+		return nil, err
+	}
+
+	var allergensEN SWTResponse[AllergenResponse]
+	err = json.Unmarshal(allergensENResponse, &allergensEN)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	allergensDEResponse, err := sendRequestToSWT(AllergensModel, payload.NeuesPalais, DE)
+	if err != nil {
+		return nil, err
+	}
+
+	var allergensDE SWTResponse[AllergenResponse]
+	err = json.Unmarshal(allergensDEResponse, &allergensDE)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	allergens := make(map[int64]payload.LocalizedString)
+
+	for _, allergen := range allergensEN.Content {
+		allergens[allergen.ID] = payload.LocalizedString{
+			ValueEN: allergen.Name,
+		}
+	}
+
+	for _, allergen := range allergensDE.Content {
+		allergens[allergen.ID] = payload.LocalizedString{
+			ValueEN: allergens[allergen.ID].ValueEN,
+			ValueDE: allergen.Name,
+		}
+	}
+
+	return allergens, nil
+}
+
+func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.LocalizedString) (*[][]payload.AllergensLocale, error) {
+	if food.AllergenIDsString == "" {
+		return nil, nil
+	}
+
+	allergenIDs := strings.Split(food.AllergenIDsString, ",")
+	var result [][]payload.AllergensLocale
+
+	for _, allergenID := range allergenIDs {
+		allergenIDInt, err := strconv.Atoi(allergenID)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing allergen ID: %w", err)
+		}
+
+		var allergenPair []payload.AllergensLocale
+		allergenPair = append(allergenPair, payload.AllergensLocale{
+			Name:   allergens[int64(allergenIDInt)].ValueDE,
+			Locale: "de",
+		})
+		allergenPair = append(allergenPair, payload.AllergensLocale{
+			Name:   allergens[int64(allergenIDInt)].ValueEN,
+			Locale: "en",
+		})
+
+		result = append(result, allergenPair)
+	}
+
+	return &result, nil
+}
+
 type FeatureResponse struct {
 	ID int64 `json:"gerichtmerkmalID"`
 	Name string `json:"name"`
 }
 
 func ParseFeatures() (map[int64]payload.LocalizedString, error) {
-	featuresENResponse, err := sendRequestToSWT(FeaturesModel, NeuesPalais, EN)
+	featuresENResponse, err := sendRequestToSWT(FeaturesModel, payload.NeuesPalais, EN)
 	if err != nil {
 		return nil, err
 	}
-	featuresDEResponse, err := sendRequestToSWT(FeaturesModel, NeuesPalais, DE)
+	featuresDEResponse, err := sendRequestToSWT(FeaturesModel, payload.NeuesPalais, DE)
 	if err != nil {
 		return nil, err
 	}
@@ -526,34 +622,4 @@ func ParseFeatures() (map[int64]payload.LocalizedString, error) {
 	}
 
 	return features, nil
-}
-
-func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditivesLocale, error) {
-	if food.AdditivesIDsString == nil || len(*food.AdditivesIDsString) == 0 {
-		return nil, nil
-	}
-	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
-
-	var result [][]payload.AdditivesLocale
-
-	for _, additiveID := range additivesArray {
-		additiveIDInt, err := strconv.Atoi(additiveID)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing additive ID: %w", err)
-		}
-
-		var additivePair []payload.AdditivesLocale
-		additivePair = append(additivePair, payload.AdditivesLocale{
-			Name: additives[int64(additiveIDInt)].ValueDE,
-			Locale: "de",
-		})
-		additivePair = append(additivePair, payload.AdditivesLocale{
-			Name: additives[int64(additiveIDInt)].ValueEN,
-			Locale: "en",
-		})
-
-		result = append(result, additivePair)
-	}
-
-	return &result, nil
 }
