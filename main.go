@@ -19,7 +19,17 @@ type MensaQueue struct {
 }
 
 func main() {
+	additives, err := parsers.ParseAdditives(parsers.AllergensModel)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
+	for _, additive := range additives {
+		fmt.Printf("de: %s, en: %s\n\n", *additive.ValueDE, *additive.ValueEN)
+	}
+
+	return
 	foodContent, err := parsers.ParsePotsdamMensaData()
 	if err != nil {
 		log.Fatal(err)

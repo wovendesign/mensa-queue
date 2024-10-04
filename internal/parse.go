@@ -10,9 +10,67 @@ import (
 	"strings"
 )
 
+type Language int
+const (
+	DE Language = iota + 1
+	EN
+)
+
+type Mensa int
+const (
+	NeuesPalais Mensa = 9600
+	Golm Mensa = 9601
+	Teltow Mensa = 9602
+	Griebnitzsee Mensa = 9603
+)
+
+type Model string
+const (
+	AdditivesModel Model = "additives"
+	AllergensModel Model = "allergens"
+	FeaturesModel Model = "features"
+	FoodModel Model = "menu"
+	CategoryModel Model = "mealCategory"
+)
+
+func sendRequestToSWT(model Model, mensa Mensa, languageType Language) ([]byte, error) {
+	client := &http.Client{}
+	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
+	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
+
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return body, nil
+}
+
 type FoodResponse struct {
 	Success bool         `json:"success"`
 	Content []FoodContent `json:"content"`
+}
+
+type SWTResponse[T any] struct {
+	Success bool         `json:"success"`
+	Content []T `json:"content"`
 }
 
 type FoodContent struct {
@@ -212,35 +270,12 @@ type FeatureList struct {
 
 
 func ParsePotsdamMensaData() (*[]FoodContent, error) {
-
-	// fmt.Println(GetMealCategory())
-	// mealCategories, err := GetMealCategory()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return nil, err
-	// }
-
-	client := &http.Client{}
-
-	// foodResponse, err := client.Get("https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961&model=menu&location=9600&languagetype=1")
-	foodReq, err := http.NewRequest("GET", "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961&model=menu&location=9600&languagetype=1", nil)
-	if err != nil {
-        fmt.Printf("error %s", err)
-        return nil, err
-    }
-	foodReq.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
-	resp, err := client.Do(foodReq)
+    body, err := sendRequestToSWT(FoodModel, NeuesPalais, DE)
     if err != nil {
-        fmt.Printf("error %s", err)
-        return nil, err
+    	return nil, err
     }
 
-    // Create an instance of the struct to hold the parsed data
 	var foodResponse FoodResponse
-
-	defer resp.Body.Close()
-    body, err := io.ReadAll(resp.Body)
-
 	// Parse the JSON data into the struct
 	err = json.Unmarshal(body, &foodResponse)
 	if err != nil {
@@ -263,31 +298,9 @@ type MealCategory struct {
 }
 
 func GetMealCategory() (*[]MealCategory, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961&model=mealCategory&location=9600&languagetype=2&_=1727802861414", nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to do request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check the HTTP status code
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP request failed with status: %s", resp.Status)
-	}
+	body, err := sendRequestToSWT(CategoryModel, NeuesPalais, DE)
 
 	var mealCategoryResponse MealCategoryResponse
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
 
 	err = json.Unmarshal(body, &mealCategoryResponse)
 	if err != nil {
@@ -402,69 +415,57 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.Nutrient, error) 
 
 
 type LocalizedString struct {
-	ValueDE string
-	ValueEN string
+	ValueDE *string
+	ValueEN *string
 }
 
-func parseAdditives() (map[int64]LocalizedString, error) {
-	additivesDE, err := sendRequestToSWT("https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961&model=additives&location=9600", de)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get additives: %w", err)
-	}
-
-	additivesEN, err := sendRequestToSWT(additives, NeuesPalais, en)
+type AdditiveResponse struct {
+	ID int64 `json:"zusatzstoffeID"`
+	Name string `json:"name"`
 }
 
-type Language int
-const (
-	de Language = iota
-	en
-)
-
-type Mensa int
-const (
-	NeuesPalais Mensa = 9600
-	Golm Mensa = 9601
-	Teltow Mensa = 9602
-	Griebnitzsee Mensa = 9603
-)
-
-type Model string
-const (
-	additives Model = "additives"
-	features Model = "features"
-	food Model = "menu"
-)
-
-func sendRequestToSWT(model Model, mensa Mensa, languageType Language) ([]byte, error) {
-	client := &http.Client{}
-	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
-	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
-	req, err := http.NewRequest("GET", reqURL, nil)
+func ParseAdditives() (map[int64]LocalizedString, error) {
+	additivesENResponse, err := sendRequestToSWT(AdditivesModel, NeuesPalais, EN)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
-	req.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
 
-
-	resp, err := client.Do(req)
+	var additivesEN SWTResponse[AdditiveResponse]
+	err = json.Unmarshal(additivesENResponse, &additivesEN)
 	if err != nil {
-		return nil, fmt.Errorf("failed to do request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check the HTTP status code
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP request failed with status: %s", resp.Status)
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	additivesDEResponse, err := sendRequestToSWT(AdditivesModel, NeuesPalais, DE)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, err
 	}
 
-	return body, nil
+	var additivesDE SWTResponse[AdditiveResponse]
+	err = json.Unmarshal(additivesDEResponse, &additivesDE)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	additives := make(map[int64]LocalizedString)
+
+	for _, add := range additivesEN.Content {
+		additives[add.ID] = LocalizedString{
+			ValueEN: &add.Name,
+		}
+	}
+
+	for _, add := range additivesDE.Content {
+		additives[add.ID] = LocalizedString{
+			ValueEN: additives[add.ID].ValueEN,
+			ValueDE: &add.Name,
+		}
+	}
+
+	return additives, nil
 }
+
+
 
 func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]string) (*[]payload.Additive, error) {
 	if len(*food.AdditivesIDsString) == 0 {
