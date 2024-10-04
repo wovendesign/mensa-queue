@@ -6,6 +6,8 @@ import (
 	"io"
 	"mensa-queue/internal/payload"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type FoodResponse struct {
@@ -396,4 +398,92 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.Nutrient, error) 
 	})
 
 	return &nutrients, nil
+}
+
+
+type LocalizedString struct {
+	ValueDE string
+	ValueEN string
+}
+
+func parseAdditives() (map[int64]LocalizedString, error) {
+	additivesDE, err := sendRequestToSWT("https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961&model=additives&location=9600", de)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get additives: %w", err)
+	}
+
+	additivesEN, err := sendRequestToSWT(additives, NeuesPalais, en)
+}
+
+type Language int
+const (
+	de Language = iota
+	en
+)
+
+type Mensa int
+const (
+	NeuesPalais Mensa = 9600
+	Golm Mensa = 9601
+	Teltow Mensa = 9602
+	Griebnitzsee Mensa = 9603
+)
+
+type Model string
+const (
+	additives Model = "additives"
+	features Model = "features"
+	food Model = "menu"
+)
+
+func sendRequestToSWT(model Model, mensa Mensa, languageType Language) ([]byte, error) {
+	client := &http.Client{}
+	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
+	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
+
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return body, nil
+}
+
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]string) (*[]payload.Additive, error) {
+	if len(*food.AdditivesIDsString) == 0 {
+		return nil, nil
+	}
+	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
+
+	var result []payload.Additive
+
+	for _, additiveID := range additivesArray {
+		additiveIDInt, err := strconv.Atoi(additiveID)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing additive ID: %w", err)
+		}
+		newAdditive := additives[int64(additiveIDInt)]
+		result = append(result, payload.Additive{
+			Name: newAdditive,
+		})
+	}
+
+	return &result, nil
 }
