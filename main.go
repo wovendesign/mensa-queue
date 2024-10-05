@@ -21,22 +21,26 @@ type MensaQueue struct {
 
 
 func main() {
+	languages := []payload.Language{payload.EN, payload.DE}
 	foodContent, err := parsers.ParsePotsdamMensaData()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	additiveMap, err := parsers.ParseAdditives()
+	additiveMap, err := parsers.ParseAdditives(languages)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	allergenMap, err := parsers.ParseAllergens()
+	allergenMap, err := parsers.ParseAllergens(languages)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+
+	featureMap, err := parsers.ParseFeatures(languages)
+
 	for _, week := range *foodContent {
 		for _, food := range week.SpeiseplanGerichtData {
 			// fmt.Printf("%+v\n", food)
@@ -47,23 +51,32 @@ func main() {
 				return
 			}
 
-			additives, err := parsers.ExtractAdditives(food, additiveMap)
+			additives, err := parsers.ExtractAdditives(food, additiveMap, languages)
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
 
+			allergens, err := parsers.ExtractAllergens(food, allergenMap, languages)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 
-			allergens, err := parsers.ExtractAllergens(food, allergenMap)
+			features, err := parsers.ExtractFeatures(food, featureMap, languages)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 
 			recipe := payload.LocalRecipe{
-				Locales: []payload.RecipesLocales{
+				Locales: []payload.Locale{
 					{
-						Title: food.SpeiseplanAdvancedGericht.RecipeName,
+						Name: food.SpeiseplanAdvancedGericht.RecipeName,
 						Locale: "de",
 					},
 					{
-						Title: food.Zusatzinformationen.GerichtnameAlternative,
+						Name: food.Zusatzinformationen.GerichtnameAlternative,
 						Locale: "en",
 					},
 				},
@@ -75,6 +88,7 @@ func main() {
 				Nutrients: nutrients,
 				Allergen: allergens,
 				Additives: additives,
+				Features: features,
 			}
 
 			t, err := time.Parse(time.RFC3339, food.SpeiseplanAdvancedGericht.Date)
@@ -82,9 +96,8 @@ func main() {
 				fmt.Println("Error parsing time:", err)
 				return
 			}
-			fmt.Println(t)
 
-			payload.InsertRecipe(recipe, t)
+			payload.InsertRecipe(recipe, t, languages)
 
 		}
 	}

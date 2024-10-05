@@ -16,11 +16,17 @@ const (
 	Griebnitzsee Mensa = 9603
 )
 
+type Language int
+const (
+	DE Language = iota + 1
+	EN
+)
 
-type LocalizedString struct {
-	ValueDE string
-	ValueEN string
+func (l Language) String() string {
+	return [...]string{"", "de", "en"}[l]
 }
+
+type LocalizedString map[Language]string
 
 type LocalizedValue[T any] struct {
 	DE T
@@ -33,9 +39,10 @@ type LocalNutrient struct {
 }
 
 type LocalRecipe struct {
-	Locales []RecipesLocales
-	Allergen       *[][]AllergensLocale
-	Additives      *[][]AdditivesLocale
+	Locales []Locale
+	Allergen       *[][]Locale
+	Additives      *[][]Locale
+	Features	   *[][]Locale
 	Nutrients      *[]LocalNutrient
 	Recipe 	   Recipe
 }
@@ -57,34 +64,52 @@ type RecipesRel struct {
 	FeaturesID *uint `gorm:"column:features_id"`
 }
 
-type RecipesLocales struct {
+type RecipesLocale struct {
 	ID uint `gorm:"primaryKey"`
-	Title string `gorm:"column:title"`
+	Name string `gorm:"column:name"`
 	Locale string `gorm:"column:_locale"`
-	RecipeID uint `gorm:"column:_parent_id"`
+	ParentID uint `gorm:"column:_parent_id"`
 }
-
-type Additive struct {
-	ID   uint `gorm:"primaryKey"`
-}
-
 type AdditivesLocale struct {
 	ID uint `gorm:"primaryKey"`
 	Name string `gorm:"column:name"`
 	Locale string `gorm:"column:_locale"`
-	AdditiveID uint `gorm:"column:_parent_id"`
+	ParentID uint `gorm:"column:_parent_id"`
+}
+type AllergensLocale struct {
+	ID uint `gorm:"primaryKey"`
+	Name string `gorm:"column:name"`
+	Locale string `gorm:"column:_locale"`
+	ParentID uint `gorm:"column:_parent_id"`
+}
+type FeaturesLocale struct {
+	ID uint `gorm:"primaryKey"`
+	Name string `gorm:"column:name"`
+	Locale string `gorm:"column:_locale"`
+	ParentID uint `gorm:"column:_parent_id"`
+}
+type NutrientsLocale struct {
+	ID uint `gorm:"primaryKey"`
+	Name string `gorm:"column:name"`
+	Locale string `gorm:"column:_locale"`
+	ParentID uint `gorm:"column:_parent_id"`
+}
+type Locale struct {
+	ID uint `gorm:"primaryKey"`
+	Name string `gorm:"column:name"`
+	Locale string `gorm:"column:_locale"`
+	ParentID uint `gorm:"column:_parent_id"`
+}
+
+
+type Additive struct {
+	ID   uint `gorm:"primaryKey"`
 }
 
 type Allergen struct {
 	ID   uint `gorm:"primaryKey"`
 }
 
-type AllergensLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	AllergenID uint `gorm:"column:_parent_id"`
-}
 
 type Nutrient struct {
 	ID              uint          `gorm:"primaryKey"`
@@ -108,19 +133,12 @@ type NutrientLabel struct {
 	Recommendation *string
 }
 
-type NutrientLabelsLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	NutrientLabelID uint `gorm:"column:_parent_id"`
-}
-
 type NutrientUnit struct {
 	ID   uint   `gorm:"primaryKey"`
 	Name string `gorm:"unique"`
 }
 
-func InsertRecipe(recipe LocalRecipe, date time.Time) {
+func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
 	// Database connection
 	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -136,8 +154,13 @@ func InsertRecipe(recipe LocalRecipe, date time.Time) {
 	// Check if recipe already exists
 	// (Title and MensaProvider are unique together)
 	// If it does not exist, insert it
-	var count RecipesLocales
-	db.FirstOrInit(&count, recipe.Locales[0])
+	count := RecipesLocale{
+		ID: recipe.Recipe.ID,
+		Name: recipe.Locales[0].Name,
+		Locale: recipe.Locales[0].Locale,
+		ParentID: recipe.Recipe.ID,
+	}
+	db.FirstOrInit(&count, count)
 
 	if count.ID == 0 {
 		// Create Recipe without title
@@ -147,7 +170,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time) {
 		}
 	} else {
 		if err := db.Where(Recipe{
-			ID: count.RecipeID,
+			ID: count.ParentID,
 			MensaProvider: 1,
 		}).Assign(recipe.Recipe).FirstOrCreate(&recipe.Recipe).Error; err != nil {
 			fmt.Println("Error inserting recipe:", err)
@@ -156,8 +179,8 @@ func InsertRecipe(recipe LocalRecipe, date time.Time) {
 	}
 
 	for _ , locale := range recipe.Locales {
-		locale.RecipeID = recipe.Recipe.ID
-		if err := db.FirstOrCreate(&locale, locale).Error; err != nil {
+		locale.ParentID = recipe.Recipe.ID
+		if err := db.Table("recipes_locales").FirstOrCreate(&locale, locale).Error; err != nil {
 			fmt.Println("Error inserting locale:", err)
 			panic(err)
 		}
@@ -165,7 +188,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time) {
 
 	for _, nutrient := range *recipe.Nutrients {
 		nutrient.Nutrient.RecipeID = recipe.Recipe.ID
-		_, err := insertNutrient(nutrient.Nutrient, nutrient.Name, db)
+		_, err := insertNutrient(nutrient.Nutrient, nutrient.Name, db, language)
 		if err != nil {
 			fmt.Println("Error inserting nutrient:", err)
 			panic(err)
@@ -192,7 +215,15 @@ func InsertRecipe(recipe LocalRecipe, date time.Time) {
 		}
 	}
 
-	fmt.Println("Recipe inserted successfully", recipe.Recipe.ID)
+	if (recipe.Features != nil) {
+		for _, feature := range *recipe.Features {
+			_, err = insertFeature(feature, recipe.Recipe, db)
+			if err != nil {
+				fmt.Println("Error inserting feature: ", err)
+				return
+			}
+		}
+	}
 
 	InsertServing(date, NeuesPalais, recipe.Recipe.ID, db)
 }
@@ -205,7 +236,6 @@ type Serving struct {
 }
 
 func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
-	fmt.Printf("Inserting serving for %v on %s for recipe%d\n", mensa, date, recipeID)
 	mensaMap := map[Mensa]uint{
 		NeuesPalais: 1,
 	}
@@ -227,10 +257,16 @@ func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
 			panic(err)
 		}
 	}
-	fmt.Printf("Serving inserted successfully: %d\n", serving.ID)
 }
 
-func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutrient, error) {
+type NutrientLabelsLocale struct {
+	ID             uint `gorm:"primaryKey"`
+	Name 		 string
+	ParentID       uint `gorm:"column:_parent_id"`
+	Locale 	   string `gorm:"column:_locale"`
+}
+
+func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB, languages []Language) (*Nutrient, error) {
 	var unit NutrientUnit
 	var nutrientValue NutrientValue
 	var nutrientLabel NutrientLabel
@@ -252,21 +288,23 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutr
 	nutrient.NutrientValueID = nutrientValue.ID
 
 	// Insert Nutrient Label
-	localNutrientDE := NutrientLabelsLocale{
-		Name: name.ValueDE,
-		Locale: "de",
+	nutrientLocales := make([]NutrientLabelsLocale, 0)
+	for _, language := range languages {
+		localNutrient := NutrientLabelsLocale{
+			Name: name[language],
+			Locale: language.String(),
+		}
+		var name NutrientLabelsLocale
+		db.FirstOrInit(&name, localNutrient)
+		nutrientLocales = append(nutrientLocales, name)
 	}
-	var nameDE NutrientLabelsLocale
-	db.FirstOrInit(&nameDE, localNutrientDE)
-	localNutrientEN := NutrientLabelsLocale{
-		Name: name.ValueEN,
-		Locale: "en",
+
+	if &nutrientLocales[0] == nil {
+		fmt.Println("No Nutrient Locales generated :(")
+		return nil, fmt.Errorf("No nutrient locales generated")
 	}
-	var nameEN NutrientLabelsLocale
-	db.FirstOrInit(&nameEN, localNutrientEN)
 
-
-	if nameDE.ID == 0 {
+	if nutrientLocales[0].ID == 0 {
 		nutrientLabel = nutrient.NutrientLabel
 		if err := db.Create(&nutrientLabel).Error; err != nil {
 			fmt.Println("Couldnt Create Nutrient Label")
@@ -274,20 +312,16 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutr
 		}
 
 		// Create Locales
-		nameDE.NutrientLabelID = nutrientLabel.ID
-		fmt.Println("NameDE:", nameDE)
-		if err := db.Create(&nameDE).Error; err != nil {
-			fmt.Println("Error inserting allergen:", err)
-			return nil, err
-		}
-		nameEN.NutrientLabelID = nutrientLabel.ID
-		if err := db.Create(&nameEN).Error; err != nil {
-			fmt.Println("Error inserting allergen:", err)
-			return nil, err
+		for _, language := range nutrientLocales {
+			language.ParentID = nutrientLabel.ID
+			if err := db.Create(&language).Error; err != nil {
+				fmt.Println("Error inserting allergen:", err)
+				return nil, err
+			}
 		}
 	} else {
 		if err := db.Where(NutrientLabel{
-			ID: nameDE.NutrientLabelID,
+			ID: nutrientLocales[0].ParentID,
 		}).First(&nutrientLabel).Error; err != nil {
 			return nil, err
 		}
@@ -304,13 +338,10 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB) (*Nutr
 	return &nutrient, nil
 }
 
-func insertAllergen(allergens []AllergensLocale, recipe Recipe, db *gorm.DB) (*Allergen, error) {
+func insertAllergen(allergens []Locale, recipe Recipe, db *gorm.DB) (*Allergen, error) {
 	allergen := Allergen{}
 
-	allergenEntity, err := insertEntityWithLocales[Allergen, AllergensLocale](db, allergen, allergens, func(locale AllergensLocale) error {
-		locale.AllergenID = allergen.ID
-		return db.Create(&locale).Error
-	})
+	allergenEntity, err := insertEntityWithLocales[Allergen](db, allergen, &allergens)
 	if err != nil {
 		return nil, err
 	}
@@ -330,14 +361,11 @@ func insertAllergen(allergens []AllergensLocale, recipe Recipe, db *gorm.DB) (*A
 	return &allergen, nil
 }
 
-func insertAdditive(additiveLocales []AdditivesLocale, recipe Recipe, db *gorm.DB) (*Additive, error) {
+func insertAdditive(additiveLocales []Locale, recipe Recipe, db *gorm.DB) (*Additive, error) {
 	additive := Additive{}
 
 	// Create or find the Additive entity along with its DE/EN locales
-	additiveEntity, err := insertEntityWithLocales(db, additive, additiveLocales, func(locale AdditivesLocale) error {
-		locale.AdditiveID = additive.ID
-		return db.Create(&locale).Error
-	})
+	additiveEntity, err := insertEntityWithLocales(db, additive, &additiveLocales)
 	if err != nil {
 		return nil, err
 	}
@@ -362,24 +390,13 @@ type Feature struct {
 	MensaProviderID uint `gorm:"column:mensa_provider_id"`
 }
 
-type FeatureLocale struct {
-	ID uint `gorm:"primaryKey"`
-	FeatureID uint `gorm:"column:_parent_id"`
-	Locale string `gorm:"column:_locale"`
-	Name string `gorm:"column:name"`
-}
-
-
-func insertFeature(featureLocales []FeatureLocale, recipe Recipe, db *gorm.DB) (*Feature, error) {
+func insertFeature(featureLocales []Locale, recipe Recipe, db *gorm.DB) (*Feature, error) {
 	feature := Feature{
 		MensaProviderID: 1,
 	}
 
 	// Create or find the Feature entity along with its DE/EN locales
-	featureEntity, err := insertEntityWithLocales(db, feature, featureLocales, func(locale FeatureLocale) error {
-		locale.FeatureID = feature.ID
-		return db.Create(&locale).Error
-	})
+	featureEntity, err := insertEntityWithLocales(db, feature, &featureLocales)
 	if err != nil {
 		return nil, err
 	}
@@ -400,76 +417,117 @@ func insertFeature(featureLocales []FeatureLocale, recipe Recipe, db *gorm.DB) (
 	return featureEntity, nil
 }
 
+func getID[T any](entity T) uint {
+	// return entity.ID
+	switch x := any(entity).(type) {
+		case Additive:
+			return x.ID
+		case Allergen:
+			return x.ID
+		case Feature:
+			return x.ID
+		case Nutrient:
+			return x.ID
+		default:
+			return 0
+	}
+}
+
 // findOrCreateLocale abstracts the repeated logic of checking and creating locales.
-func findOrCreateLocale[T any](db *gorm.DB, locale T, createEntity func() (T, error)) (T, error) {
-	var existingLocale T
+func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) error {
+	var existingLocale Locale
 
 	// Check if the locale already exists in the database
-	if err := db.FirstOrInit(&existingLocale, locale).Error; err != nil {
-		fmt.Println("Error finding locale:", err)
-		return existingLocale, err
+	// if err := db.FirstOrInit(&existingLocale, locale).Error; err != nil {
+	// 	fmt.Println("Error finding locale:", err)
+	// 	return err
+	// }
+
+	switch any(entity).(type) {
+		case Additive:
+			_locale := AdditivesLocale{
+				ID: locale.ID,
+				Name: locale.Name,
+				Locale: locale.Locale,
+				ParentID: locale.ParentID,
+			}
+			// Check if the locale already exists in the database
+			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
+				fmt.Println("Error finding locale:", err)
+				return err
+			}
+			locale.ID = _locale.ID
+			existingLocale = Locale(_locale)
+		case Allergen:
+			_locale := AllergensLocale{
+				ID: locale.ID,
+				Name: locale.Name,
+				Locale: locale.Locale,
+				ParentID: locale.ParentID,
+			}
+			// Check if the locale already exists in the database
+			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
+				fmt.Println("Error finding locale:", err)
+				return err
+			}
+			fmt.Println("Locale ID:", _locale.ID)
+			locale.ID = _locale.ID
+			existingLocale = Locale(_locale)
+		case Feature:
+			_locale := FeaturesLocale{
+				ID: locale.ID,
+				Name: locale.Name,
+				Locale: locale.Locale,
+				ParentID: locale.ParentID,
+			}
+			// Check if the locale already exists in the database
+			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
+				fmt.Println("Error finding locale:", err)
+				return err
+			}
+			locale.ID = _locale.ID
+			existingLocale = Locale(_locale)
+		case Nutrient:
+			_locale := NutrientsLocale{
+				ID: locale.ID,
+				Name: locale.Name,
+				Locale: locale.Locale,
+				ParentID: locale.ParentID,
+			}
+			// Check if the locale already exists in the database
+			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
+				fmt.Println("Error finding locale:", err)
+				return err
+			}
+			locale.ID = _locale.ID
+			existingLocale = Locale(_locale)
+		default:
+			return fmt.Errorf("Table name not found")
 	}
 
 	// If the locale doesn't exist (ID is zero), call the entity creation function
 	// createEntity is a function that creates the entity if it doesn't exist
-	if getID(existingLocale) == 0 {
-		createdLocale, err := createEntity()
-		if err != nil {
-			fmt.Println("Error creating entity:", err)
-			return createdLocale, err
-		}
-		return createdLocale, nil
-	}
-
-	return existingLocale, nil
-}
-
-// Helper function to extract ID (assuming all structs have an ID field)
-func getID[T any](v T) uint {
-	switch x := any(v).(type) {
-	case AdditivesLocale:
-		return x.ID
-	case AllergensLocale:
-		return x.ID
-	case NutrientLabelsLocale:
-		return x.ID
-	// Add more cases as needed for other types
-	default:
-		return 0
-	}
-}
-
-func insertLocales[T any](db *gorm.DB, locales []T, localeCreateFn func(T) error) error {
-	for _, locale := range locales {
-		_, err := findOrCreateLocale(db, locale, func() (T, error) {
-			if err := localeCreateFn(locale); err != nil {
-				return locale, err
-			}
-			return locale, nil
-		})
-		if err != nil {
+	if existingLocale.ID == 0 {
+		// No Locales found
+		// Create entity, then create locale
+		if err := db.Create(&entity).Error; err != nil {
 			return err
 		}
+		existingLocale.ParentID = getID(entity)
+
+		return nil
 	}
+
 	return nil
 }
 
-func insertEntityWithLocales[T any, L any](db *gorm.DB, entity T, locales []L, localeCreateFn func(L) error) (*T, error) {
-	// Create the entity if it doesn't exist
-	entity, err := findOrCreateLocale(db, entity, func() (T, error) {
-		if err := db.Create(&entity).Error; err != nil {
-			return entity, err
+func insertEntityWithLocales[T any](db *gorm.DB, entity T, locales *[]Locale) (*T, error) {
+	for _, locale := range *locales {
+		err := findOrCreateLocale(db, &locale, entity)
+		if err != nil {
+			return nil, err
 		}
-		return entity, nil
-	})
-	if err != nil {
-		return nil, err
+		// locales[i] = *locale
 	}
-
-	// Insert associated locales
-	if err := insertLocales(db, locales, localeCreateFn); err != nil {
-		return nil, err
-	}
-
 	return &entity, nil
 }

@@ -11,12 +11,6 @@ import (
 	"strings"
 )
 
-type Language int
-const (
-	DE Language = iota + 1
-	EN
-)
-
 type Model string
 const (
 	AdditivesModel Model = "additives"
@@ -26,7 +20,7 @@ const (
 	CategoryModel Model = "mealCategory"
 )
 
-func sendRequestToSWT(model Model, mensa payload.Mensa, languageType Language) ([]byte, error) {
+func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Language) ([]byte, error) {
 	client := &http.Client{}
 	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
 	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
@@ -56,9 +50,19 @@ func sendRequestToSWT(model Model, mensa payload.Mensa, languageType Language) (
 	return body, nil
 }
 
-type FoodResponse struct {
-	Success bool         `json:"success"`
-	Content []FoodContent `json:"content"`
+func ParseModel[T any](model Model, mensa payload.Mensa, languageType payload.Language) (*SWTResponse[T], error) {
+    body, err := sendRequestToSWT(model, mensa, languageType)
+    if err != nil {
+        return nil, err
+    }
+
+    var response SWTResponse[T]
+    err = json.Unmarshal(body, &response)
+    if err != nil {
+        return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+    }
+
+    return &response, nil
 }
 
 type SWTResponse[T any] struct {
@@ -256,15 +260,16 @@ type FeatureList struct {
 
 
 func ParsePotsdamMensaData() (*[]FoodContent, error) {
-    body, err := sendRequestToSWT(FoodModel, payload.NeuesPalais, DE)
+    body, err := sendRequestToSWT(FoodModel, payload.NeuesPalais, payload.DE)
     if err != nil {
     	return nil, err
     }
 
-	var foodResponse FoodResponse
+	var foodResponse SWTResponse[FoodContent]
 	// Parse the JSON data into the struct
 	err = json.Unmarshal(body, &foodResponse)
 	if err != nil {
+
 		fmt.Println("Error:", err)
 		return nil, err
 	}
@@ -284,7 +289,7 @@ type MealCategory struct {
 }
 
 func ParseMealCategory() (*[]MealCategory, error) {
-	body, err := sendRequestToSWT(CategoryModel, payload.NeuesPalais, DE)
+	body, err := sendRequestToSWT(CategoryModel, payload.NeuesPalais, payload.DE)
 
 	var mealCategoryResponse MealCategoryResponse
 
@@ -316,8 +321,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Kalorien",
-			ValueEN: "Calories",
+			payload.DE: "Kalorien",
+			payload.EN: "Calories",
 		},
 	})
 
@@ -333,8 +338,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Fett",
-			ValueEN: "Fat",
+			payload.DE: "Fett",
+			payload.EN: "Fat",
 		},
 	})
 
@@ -350,8 +355,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Gesättigte Fettsäuren",
-			ValueEN: "Saturated Fatty Acids",
+			payload.DE: "Gesättigte Fettsäuren",
+			payload.EN: "Saturated Fatty Acids",
 		},
 	})
 
@@ -367,8 +372,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Kohlenhydrate",
-			ValueEN: "Carbohydrates",
+			payload.DE: "Kohlenhydrate",
+			payload.EN: "Carbohydrates",
 		},
 	})
 
@@ -384,8 +389,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Zucker",
-			ValueEN: "Sugar",
+			payload.DE: "Zucker",
+			payload.EN: "Sugar",
 		},
 	})
 
@@ -401,8 +406,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Eiweiß",
-			ValueEN: "Protein",
+			payload.DE: "Eiweiß",
+			payload.EN: "Protein",
 		},
 	})
 
@@ -418,8 +423,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 			},
 		},
 		Name: payload.LocalizedString {
-			ValueDE: "Salz",
-			ValueEN: "Salt",
+			payload.DE: "Salz",
+			payload.EN: "Salt",
 		},
 	})
 
@@ -432,54 +437,30 @@ type AdditiveResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAdditives() (map[int64]payload.LocalizedString, error) {
-	additivesENResponse, err := sendRequestToSWT(AdditivesModel, payload.NeuesPalais, EN)
-	if err != nil {
-		return nil, err
-	}
-
-	var additivesEN SWTResponse[AdditiveResponse]
-	err = json.Unmarshal(additivesENResponse, &additivesEN)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
-
-	additivesDEResponse, err := sendRequestToSWT(AdditivesModel, payload.NeuesPalais, DE)
-	if err != nil {
-		return nil, err
-	}
-
-	var additivesDE SWTResponse[AdditiveResponse]
-	err = json.Unmarshal(additivesDEResponse, &additivesDE)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
-
-	additives := make(map[int64]payload.LocalizedString)
-
-	for _, add := range additivesEN.Content {
-		additives[add.ID] = payload.LocalizedString{
-			ValueEN: add.Name,
+func ParseAdditives(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+	allAdditives := make(map[int64]payload.LocalizedString)
+	for _, language := range languages {
+		additives, err := ParseModel[AdditiveResponse](AdditivesModel, payload.NeuesPalais, language)
+		if err != nil {
+			return nil, err
+		}
+		for _, additive := range additives.Content {
+			allAdditives[additive.ID] = payload.LocalizedString{
+				language: additive.Name,
+			}
 		}
 	}
 
-	for _, add := range additivesDE.Content {
-		additives[add.ID] = payload.LocalizedString{
-			ValueEN: additives[add.ID].ValueEN,
-			ValueDE: add.Name,
-		}
-	}
-
-	return additives, nil
+	return allAdditives, nil
 }
 
-func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString) (*[][]payload.AdditivesLocale, error) {
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
 	if food.AdditivesIDsString == nil || len(*food.AdditivesIDsString) == 0 {
 		return nil, nil
 	}
 	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
 
-	var result [][]payload.AdditivesLocale
+	var result [][]payload.Locale
 
 	for _, additiveID := range additivesArray {
 		additiveIDInt, err := strconv.Atoi(additiveID)
@@ -487,15 +468,13 @@ func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.L
 			return nil, fmt.Errorf("error parsing additive ID: %w", err)
 		}
 
-		var additivePair []payload.AdditivesLocale
-		additivePair = append(additivePair, payload.AdditivesLocale{
-			Name: additives[int64(additiveIDInt)].ValueDE,
-			Locale: "de",
-		})
-		additivePair = append(additivePair, payload.AdditivesLocale{
-			Name: additives[int64(additiveIDInt)].ValueEN,
-			Locale: "en",
-		})
+		var additivePair []payload.Locale
+		for _, language := range languages {
+			additivePair = append(additivePair, payload.Locale{
+				Name:   additives[int64(additiveIDInt)][language],
+				Locale: language.String(),
+			})
+		}
 
 		result = append(result, additivePair)
 	}
@@ -508,54 +487,32 @@ type AllergenResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAllergens() (map[int64]payload.LocalizedString, error) {
-	allergensENResponse, err := sendRequestToSWT(AllergensModel, payload.NeuesPalais, EN)
-	if err != nil {
-		return nil, err
-	}
+func ParseAllergens(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+	allAllergens := make(map[int64]payload.LocalizedString)
 
-	var allergensEN SWTResponse[AllergenResponse]
-	err = json.Unmarshal(allergensENResponse, &allergensEN)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
+	for _, language := range languages {
+		allergens, err := ParseModel[AllergenResponse](AllergensModel, payload.NeuesPalais, language)
+		if err != nil {
+			return nil, err
+		}
 
-	allergensDEResponse, err := sendRequestToSWT(AllergensModel, payload.NeuesPalais, DE)
-	if err != nil {
-		return nil, err
-	}
-
-	var allergensDE SWTResponse[AllergenResponse]
-	err = json.Unmarshal(allergensDEResponse, &allergensDE)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
-
-	allergens := make(map[int64]payload.LocalizedString)
-
-	for _, allergen := range allergensEN.Content {
-		allergens[allergen.ID] = payload.LocalizedString{
-			ValueEN: allergen.Name,
+		for _, allergen := range allergens.Content {
+			allAllergens[allergen.ID] = payload.LocalizedString{
+				language: allergen.Name,
+			}
 		}
 	}
 
-	for _, allergen := range allergensDE.Content {
-		allergens[allergen.ID] = payload.LocalizedString{
-			ValueEN: allergens[allergen.ID].ValueEN,
-			ValueDE: allergen.Name,
-		}
-	}
-
-	return allergens, nil
+	return allAllergens, nil
 }
 
-func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.LocalizedString) (*[][]payload.AllergensLocale, error) {
+func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
 	if food.AllergenIDsString == "" {
 		return nil, nil
 	}
 
 	allergenIDs := strings.Split(food.AllergenIDsString, ",")
-	var result [][]payload.AllergensLocale
+	var result [][]payload.Locale
 
 	for _, allergenID := range allergenIDs {
 		allergenIDInt, err := strconv.Atoi(allergenID)
@@ -563,15 +520,13 @@ func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.L
 			return nil, fmt.Errorf("error parsing allergen ID: %w", err)
 		}
 
-		var allergenPair []payload.AllergensLocale
-		allergenPair = append(allergenPair, payload.AllergensLocale{
-			Name:   allergens[int64(allergenIDInt)].ValueDE,
-			Locale: "de",
-		})
-		allergenPair = append(allergenPair, payload.AllergensLocale{
-			Name:   allergens[int64(allergenIDInt)].ValueEN,
-			Locale: "en",
-		})
+		var allergenPair []payload.Locale
+		for _, language := range languages {
+			allergenPair = append(allergenPair, payload.Locale{
+				Name:   allergens[int64(allergenIDInt)][language],
+				Locale: language.String(),
+			})
+		}
 
 		result = append(result, allergenPair)
 	}
@@ -584,57 +539,47 @@ type FeatureResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseFeatures() (map[int64]payload.LocalizedString, error) {
-	featuresENResponse, err := sendRequestToSWT(FeaturesModel, payload.NeuesPalais, EN)
-	if err != nil {
-		return nil, err
-	}
-	featuresDEResponse, err := sendRequestToSWT(FeaturesModel, payload.NeuesPalais, DE)
-	if err != nil {
-		return nil, err
-	}
-
-	var featuresEN SWTResponse[FeatureResponse]
-	err = json.Unmarshal(featuresENResponse, &featuresEN)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
-
-	var featuresDE SWTResponse[FeatureResponse]
-	err = json.Unmarshal(featuresDEResponse, &featuresDE)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
-
-	features := make(map[int64]payload.LocalizedString)
-
-	for _, feature := range featuresEN.Content {
-		features[feature.ID] = payload.LocalizedString{
-			ValueEN: feature.Name,
+func ParseFeatures(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+	allFeatures := make(map[int64]payload.LocalizedString)
+	for _, language := range languages {
+		features, err := ParseModel[FeatureResponse](FeaturesModel, payload.NeuesPalais, language)
+		if err != nil {
+			return nil, err
+		}
+		for _, feature := range features.Content {
+			allFeatures[feature.ID] = payload.LocalizedString{
+				language: feature.Name,
+			}
 		}
 	}
 
-	for _, feature := range featuresDE.Content {
-		features[feature.ID] = payload.LocalizedString{
-			ValueEN: features[feature.ID].ValueEN,
-			ValueDE: feature.Name,
-		}
-	}
-
-	return features, nil
+	return allFeatures, nil
 }
 
-func ParseModel[T any](model Model, mensa payload.Mensa, languageType Language) (*SWTResponse[T], error) {
-    body, err := sendRequestToSWT(model, mensa, languageType)
-    if err != nil {
-        return nil, err
-    }
+func ExtractFeatures(food SpeiseplanGerichtDatum, features map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
+	if food.FeaturesIDsString == "" {
+		return nil, nil
+	}
 
-    var response SWTResponse[T]
-    err = json.Unmarshal(body, &response)
-    if err != nil {
-        return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-    }
+	featureIDs := strings.Split(food.FeaturesIDsString, ",")
+	var result [][]payload.Locale
 
-    return &response, nil
+	for _, featureID := range featureIDs {
+		featureIDInt, err := strconv.Atoi(featureID)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing allergen ID: %w", err)
+		}
+
+		var featurePair []payload.Locale
+		for _, language := range languages {
+			featurePair = append(featurePair, payload.Locale{
+				Name:   features[int64(featureIDInt)][language],
+				Locale: language.String(),
+			})
+		}
+
+		result = append(result, featurePair)
+	}
+
+	return &result, nil
 }
