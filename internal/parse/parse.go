@@ -283,7 +283,7 @@ type MealCategory struct {
 	LanguageType int64 `json:"languageTypeID"`
 }
 
-func GetMealCategory() (*[]MealCategory, error) {
+func ParseMealCategory() (*[]MealCategory, error) {
 	body, err := sendRequestToSWT(CategoryModel, payload.NeuesPalais, DE)
 
 	var mealCategoryResponse MealCategoryResponse
@@ -622,4 +622,19 @@ func ParseFeatures() (map[int64]payload.LocalizedString, error) {
 	}
 
 	return features, nil
+}
+
+func ParseModel[T any](model Model, mensa payload.Mensa, languageType Language) (*SWTResponse[T], error) {
+    body, err := sendRequestToSWT(model, mensa, languageType)
+    if err != nil {
+        return nil, err
+    }
+
+    var response SWTResponse[T]
+    err = json.Unmarshal(body, &response)
+    if err != nil {
+        return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+    }
+
+    return &response, nil
 }

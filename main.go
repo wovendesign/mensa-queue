@@ -70,7 +70,6 @@ func main() {
 				Recipe: payload.Recipe{
 					PriceStudents: &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
 					PriceGuests: &food.Zusatzinformationen.GaestepreisDecimal2,
-					Diet: payload.DietMeat,
 					MensaProvider: 1,
 				},
 				Nutrients: nutrients,
