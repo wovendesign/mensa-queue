@@ -38,8 +38,12 @@ func main() {
 		log.Fatal(err)
 		return
 	}
-
+	// fmt.Printf("%+v\n", allergenMap
 	featureMap, err := parsers.ParseFeatures(languages)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	for _, week := range *foodContent {
 		for _, food := range week.SpeiseplanGerichtData {

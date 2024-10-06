@@ -433,7 +433,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 
 
 type AdditiveResponse struct {
-	ID int64 `json:"allergeneID"`
+	ID int64 `json:"zusatzstoffeID"`
 	Name string `json:"name"`
 }
 
@@ -445,9 +445,18 @@ func ParseAdditives(languages []payload.Language) (map[int64]payload.LocalizedSt
 			return nil, err
 		}
 		for _, additive := range additives.Content {
-			allAdditives[additive.ID] = payload.LocalizedString{
-				language: additive.Name,
+			// Check if the additive ID already exists in the map
+			localizedString, exists := allAdditives[additive.ID]
+			if !exists {
+				// If it doesn't exist, initialize the map
+				localizedString = payload.LocalizedString{}
 			}
+
+			// Add or update the name for the current language
+			localizedString[language] = additive.Name
+
+			// Update the map with the modified localized string
+			allAdditives[additive.ID] = localizedString
 		}
 	}
 
@@ -497,9 +506,18 @@ func ParseAllergens(languages []payload.Language) (map[int64]payload.LocalizedSt
 		}
 
 		for _, allergen := range allergens.Content {
-			allAllergens[allergen.ID] = payload.LocalizedString{
-				language: allergen.Name,
+			// Check if the allergen ID already exists in the map
+			localizedString, exists := allAllergens[allergen.ID]
+			if !exists {
+				// If it doesn't exist, initialize the map
+				localizedString = payload.LocalizedString{}
 			}
+
+			// Add or update the name for the current language
+			localizedString[language] = allergen.Name
+
+			// Update the map with the modified localized string
+			allAllergens[allergen.ID] = localizedString
 		}
 	}
 
@@ -547,9 +565,18 @@ func ParseFeatures(languages []payload.Language) (map[int64]payload.LocalizedStr
 			return nil, err
 		}
 		for _, feature := range features.Content {
-			allFeatures[feature.ID] = payload.LocalizedString{
-				language: feature.Name,
+			// Check if the feature ID already exists in the map
+			localizedString, exists := allFeatures[feature.ID]
+			if !exists {
+				// If it doesn't exist, initialize the map
+				localizedString = payload.LocalizedString{}
 			}
+
+			// Add or update the name for the current language
+			localizedString[language] = feature.Name
+
+			// Update the map with the modified localized string
+			allFeatures[feature.ID] = localizedString
 		}
 	}
 
