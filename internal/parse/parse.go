@@ -259,8 +259,8 @@ type FeatureList struct {
 }
 
 
-func ParsePotsdamMensaData() (*[]FoodContent, error) {
-    body, err := sendRequestToSWT(FoodModel, payload.NeuesPalais, payload.DE)
+func ParsePotsdamMensaData(mensa payload.Mensa) (*[]FoodContent, error) {
+    body, err := sendRequestToSWT(FoodModel, mensa, payload.DE)
     if err != nil {
     	return nil, err
     }
@@ -288,8 +288,8 @@ type MealCategory struct {
 	LanguageType int64 `json:"languageTypeID"`
 }
 
-func ParseMealCategory() (*[]MealCategory, error) {
-	body, err := sendRequestToSWT(CategoryModel, payload.NeuesPalais, payload.DE)
+func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
+	body, err := sendRequestToSWT(CategoryModel, mensa, payload.DE)
 
 	var mealCategoryResponse MealCategoryResponse
 
@@ -437,10 +437,10 @@ type AdditiveResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAdditives(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+func ParseAdditives(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allAdditives := make(map[int64]payload.LocalizedString)
 	for _, language := range languages {
-		additives, err := ParseModel[AdditiveResponse](AdditivesModel, payload.NeuesPalais, language)
+		additives, err := ParseModel[AdditiveResponse](AdditivesModel, mensa, language)
 		if err != nil {
 			return nil, err
 		}
@@ -496,11 +496,11 @@ type AllergenResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAllergens(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+func ParseAllergens(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allAllergens := make(map[int64]payload.LocalizedString)
 
 	for _, language := range languages {
-		allergens, err := ParseModel[AllergenResponse](AllergensModel, payload.NeuesPalais, language)
+		allergens, err := ParseModel[AllergenResponse](AllergensModel, mensa, language)
 		if err != nil {
 			return nil, err
 		}
@@ -557,10 +557,10 @@ type FeatureResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseFeatures(languages []payload.Language) (map[int64]payload.LocalizedString, error) {
+func ParseFeatures(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allFeatures := make(map[int64]payload.LocalizedString)
 	for _, language := range languages {
-		features, err := ParseModel[FeatureResponse](FeaturesModel, payload.NeuesPalais, language)
+		features, err := ParseModel[FeatureResponse](FeaturesModel, mensa, language)
 		if err != nil {
 			return nil, err
 		}

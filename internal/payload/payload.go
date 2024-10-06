@@ -2,18 +2,21 @@ package payload
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 type Mensa int
 const (
 	NeuesPalais Mensa = 9600
-	Golm Mensa = 9601
-	Teltow Mensa = 9602
-	Griebnitzsee Mensa = 9603
+	Griebnitzsee Mensa = 9601
+	Golm Mensa = 9602
+	Filmuniversitaet Mensa = 9603
+	FHP Mensa = 9604
+	Wildau Mensa = 9605
+	Brandenburg Mensa = 9606
 )
 
 type Language int
@@ -190,14 +193,7 @@ type NutrientUnit struct {
 	Name string `gorm:"unique"`
 }
 
-func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
-	// Database connection
-	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-
+func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa Mensa, db *gorm.DB) {
 	if len(recipe.Locales) == 0 {
 		fmt.Println("No locales provided")
 		return
@@ -220,6 +216,20 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
 			fmt.Println("Error inserting recipe:", err)
 			panic(err)
 		}
+
+		for _ , locale := range recipe.Locales {
+			_locale := RecipesLocale{
+				// ID: locale.ID,
+				Name: locale.Name,
+				Locale: locale.Locale,
+				ParentID: recipe.Recipe.ID,
+			}
+			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
+				fmt.Println("Error inserting locale:", err)
+				panic(err)
+			}
+			locale = Locale(_locale)
+		}
 	} else {
 		if err := db.Where(Recipe{
 			ID: count.ParentID,
@@ -230,12 +240,13 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
 		}
 	}
 
-	for _ , locale := range recipe.Locales {
-		locale.ParentID = recipe.Recipe.ID
-		if err := db.Table("recipes_locales").FirstOrCreate(&locale, locale).Error; err != nil {
-			fmt.Println("Error inserting locale:", err)
-			panic(err)
-		}
+	fmt.Printf("Recipe: %+v\nMensa: %+v\nCount: %+v\n\n", recipe, mensa, count)
+	// Adding failsafe in case locales are wrongly attributed
+	if (strings.Contains(recipe.Locales[0].Name, "100") && !strings.Contains(recipe.Locales[1].Name, "100")){
+		// This is a failsafe for the case that the locales are wrongly attributed
+		// For example: Title DE: Preis je 100 Gramm
+		// EN: Spaghetti Basilikumpesto mit Cashewkernen
+		return
 	}
 
 	for _, nutrient := range *recipe.Nutrients {
@@ -269,7 +280,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
 
 	if (recipe.Features != nil) {
 		for _, feature := range *recipe.Features {
-			_, err = insertFeature(feature, recipe.Recipe, db)
+			_, err := insertFeature(feature, recipe.Recipe, db)
 			if err != nil {
 				fmt.Println("Error inserting feature: ", err)
 				return
@@ -277,7 +288,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language) {
 		}
 	}
 
-	InsertServing(date, NeuesPalais, recipe.Recipe.ID, db)
+	InsertServing(date, mensa, recipe.Recipe.ID, db)
 }
 
 type Serving struct {
@@ -290,6 +301,12 @@ type Serving struct {
 func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
 	mensaMap := map[Mensa]uint{
 		NeuesPalais: 1,
+		Griebnitzsee: 2,
+		Golm: 3,
+		Filmuniversitaet: 4,
+		FHP: 5,
+		Wildau: 6,
+		Brandenburg: 7,
 	}
 
 	serving := Serving{
@@ -557,6 +574,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 		// Find or create locale for the given entity type
 		foundLocale, err := findOrCreateLocale(db, &locale, entity)
 		if err != nil {
+			fmt.Println("Error finding/creating locale:", err)
 			return nil, err
 		}
 
@@ -569,6 +587,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 	if (*locales)[0].ID == 0 {
 		// Create the entity
 		if err := db.Create(&entity).Error; err != nil {
+			fmt.Println("Error creating entity:", err)
 			return nil, err
 		}
 		// fmt.Printf("Creating Entity: %+v\n", entity)
@@ -576,6 +595,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 		// Get Typed entity
 		entity.SetID((*locales)[0].ParentID)
 		if err := db.First(&entity).Error; err != nil {
+			fmt.Println("Error finding entity:", err)
 			return nil, err
 		}
 		// fmt.Printf("Found Entity: %+v\n", entity)
@@ -583,11 +603,11 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 
 	// Finally, create or find the entity itself
 	if err := db.FirstOrCreate(&entity).Error; err != nil {
+		fmt.Println("Error finding/creating entity:", err)
 		return nil, err
 	}
 
 	// fmt.Printf("Entity: %+v\n", entity)
-
 	// If locale wasnt created, create it now
 	for _, locale := range *locales {
 		if locale.ID == 0 {
@@ -604,6 +624,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 					fmt.Println("Error finding/creating Additive locale:", err)
 					return nil, err
 				}
+				locale = Locale(additiveLocale)
 			case Allergen:
 				allergenLocale := AllergensLocale{
 					Name:     locale.Name,
@@ -615,6 +636,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 					fmt.Println("Error finding/creating Allergen locale:", err)
 					return nil, err
 				}
+				locale = Locale(allergenLocale)
 			case Feature:
 				featureLocale := FeaturesLocale{
 					Name:     locale.Name,
@@ -626,6 +648,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 					fmt.Println("Error finding/creating Feature locale:", err)
 					return nil, err
 				}
+				locale = Locale(featureLocale)
 			case Nutrient:
 				nutrientLocale := NutrientsLocale{
 					Name:     locale.Name,
@@ -637,6 +660,7 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 					fmt.Println("Error finding/creating Nutrient locale:", err)
 					return nil, err
 				}
+				locale = Locale(nutrientLocale)
 			default:
 				return nil, fmt.Errorf("unknown entity type")
 			}

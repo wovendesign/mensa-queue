@@ -11,6 +11,9 @@ import (
 
 	"net/http"
 	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type MensaQueue struct {
@@ -18,28 +21,42 @@ type MensaQueue struct {
 	FoodTitle *string `json:"prompt"`
 }
 
-
-
 func main() {
+	// Database connection
+	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	tx := db.Session(&gorm.Session{SkipDefaultTransaction: true})
+
+	mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
+	for _, mensa := range mensas {
+		getMensaData(mensa, tx)
+	}
+}
+
+func getMensaData(mensa payload.Mensa, db *gorm.DB) {
 	languages := []payload.Language{payload.EN, payload.DE}
-	foodContent, err := parsers.ParsePotsdamMensaData()
+	foodContent, err := parsers.ParsePotsdamMensaData(mensa)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	additiveMap, err := parsers.ParseAdditives(languages)
+	additiveMap, err := parsers.ParseAdditives(languages, mensa)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
-	allergenMap, err := parsers.ParseAllergens(languages)
+	allergenMap, err := parsers.ParseAllergens(languages, mensa)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	// fmt.Printf("%+v\n", allergenMap
-	featureMap, err := parsers.ParseFeatures(languages)
+	featureMap, err := parsers.ParseFeatures(languages, mensa)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -101,11 +118,10 @@ func main() {
 				return
 			}
 
-			payload.InsertRecipe(recipe, t, languages)
+			payload.InsertRecipe(recipe, t, languages, mensa, db)
 
 		}
 	}
-
 }
 
 func handleAIQueue() {
