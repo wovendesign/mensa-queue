@@ -12,12 +12,13 @@ import (
 )
 
 type Model string
+
 const (
 	AdditivesModel Model = "additives"
 	AllergensModel Model = "allergens"
-	FeaturesModel Model = "features"
-	FoodModel Model = "menu"
-	CategoryModel Model = "mealCategory"
+	FeaturesModel  Model = "features"
+	FoodModel      Model = "menu"
+	CategoryModel  Model = "mealCategory"
 )
 
 func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Language) ([]byte, error) {
@@ -29,7 +30,6 @@ func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Lan
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Add("Referer", "https://swp.webspeiseplan.de/InitialConfig")
-
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -51,88 +51,88 @@ func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Lan
 }
 
 func ParseModel[T any](model Model, mensa payload.Mensa, languageType payload.Language) (*SWTResponse[T], error) {
-    body, err := sendRequestToSWT(model, mensa, languageType)
-    if err != nil {
-        return nil, err
-    }
+	body, err := sendRequestToSWT(model, mensa, languageType)
+	if err != nil {
+		return nil, err
+	}
 
-    var response SWTResponse[T]
-    err = json.Unmarshal(body, &response)
-    if err != nil {
-        return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-    }
+	var response SWTResponse[T]
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
 
-    return &response, nil
+	return &response, nil
 }
 
 type SWTResponse[T any] struct {
-	Success bool         `json:"success"`
-	Content []T `json:"content"`
+	Success bool `json:"success"`
+	Content []T  `json:"content"`
 }
 
 type FoodContent struct {
-	SpeiseplanGerichtData  []SpeiseplanGerichtDatum `json:"speiseplanGerichtData"`
+	SpeiseplanGerichtData []SpeiseplanGerichtDatum `json:"speiseplanGerichtData"`
 }
 
 type SpeiseplanGerichtDatum struct {
 	SpeiseplanAdvancedGericht SpeiseplanAdvancedGericht `json:"speiseplanAdvancedGericht"`
-	Zusatzinformationen        Zusatzinformationen         `json:"zusatzinformationen"`
-	AllergenIDsString              string                     `json:"allergeneIds"`
-	AdditivesIDsString           *string                    `json:"zusatzstoffeIds,omitempty"`
-	FeaturesIDsString        string                     `json:"gerichtmerkmaleIds"`
+	Zusatzinformationen       Zusatzinformationen       `json:"zusatzinformationen"`
+	AllergenIDsString         string                    `json:"allergeneIds"`
+	AdditivesIDsString        *string                   `json:"zusatzstoffeIds,omitempty"`
+	FeaturesIDsString         string                    `json:"gerichtmerkmaleIds"`
 }
 
 type SpeiseplanAdvancedGericht struct {
-	ID                          int64  `json:"id"`
-	Active                       bool   `json:"aktiv"`
-	Date                       string `json:"datum"`
-	RecipeCategoryID          int64  `json:"gerichtkategorieID"`
-	RecipeName                 string `json:"gerichtname"`
-	ZusatzinformationenID        int64  `json:"zusatzinformationenID"`
-	SpeiseplanAdvancedID        int64  `json:"speiseplanAdvancedID"`
-	TimestampLog                string `json:"timestampLog"`
-	UserID                 int64  `json:"benutzerID"`
+	ID                    int64  `json:"id"`
+	Active                bool   `json:"aktiv"`
+	Date                  string `json:"datum"`
+	RecipeCategoryID      int64  `json:"gerichtkategorieID"`
+	RecipeName            string `json:"gerichtname"`
+	ZusatzinformationenID int64  `json:"zusatzinformationenID"`
+	SpeiseplanAdvancedID  int64  `json:"speiseplanAdvancedID"`
+	TimestampLog          string `json:"timestampLog"`
+	UserID                int64  `json:"benutzerID"`
 }
 
 type Zusatzinformationen struct {
-	ID                         int64           `json:"id"`
-	GerichtnameAlternative     string          `json:"gerichtnameAlternative"`
-	MitarbeiterpreisDecimal2   float64         `json:"mitarbeiterpreisDecimal2"`
-	GaestepreisDecimal2       float64         `json:"gaestepreisDecimal2"`
-	EnaehrungsampelID         *json.RawMessage `json:"ernaehrungsampelID,omitempty"`
-	NwkjInteger                int64           `json:"nwkjInteger"`
-	NwkcalInteger              int64           `json:"nwkcalInteger"`
-	NwfettDecimal1             float64         `json:"nwfettDecimal1"`
-	NwfettsaeurenDecimal1      float64         `json:"nwfettsaeurenDecimal1"`
-	NwkohlehydrateDecimal1     float64         `json:"nwKohlehydrateDecimal1"`
-	NwzuckerDecimal1           float64         `json:"nwzuckerDecimal1"`
-	NweiweissDecimal1          float64         `json:"nweiweissDecimal1"`
-	NwsalzDecimal1             float64         `json:"nwsalzDecimal1"`
-	NwbeDecimal2               *json.RawMessage `json:"nwbeDecimal2,omitempty"`
-	AllowFeedback              bool            `json:"allowFeedback"`
-	GerichtImage               *json.RawMessage `json:"gerichtImage,omitempty"`
-	Lieferanteninfo            *json.RawMessage `json:"lieferanteninfo,omitempty"`
-	LieferanteninfoLink        *json.RawMessage `json:"lieferanteninfoLink,omitempty"`
-	EdFaktorDecimal1           *json.RawMessage `json:"edFaktorDecimal1,omitempty"`
-	Plu                        *string          `json:"plu,omitempty"`
-	Price3Decimal2            float64         `json:"price3Decimal2"`
-	Price4Decimal2            *json.RawMessage `json:"price4Decimal2,omitempty"`
-	Contingent                *json.RawMessage `json:"contingent,omitempty"`
-	TaxRateDecimal2           *json.RawMessage `json:"taxRateDecimal2,omitempty"`
-	IngredientList            *json.RawMessage `json:"ingredientList,omitempty"`
-	Sustainability             Sustainability    `json:"sustainability"`
+	ID                       int64            `json:"id"`
+	GerichtnameAlternative   string           `json:"gerichtnameAlternative"`
+	MitarbeiterpreisDecimal2 float64          `json:"mitarbeiterpreisDecimal2"`
+	GaestepreisDecimal2      float64          `json:"gaestepreisDecimal2"`
+	EnaehrungsampelID        *json.RawMessage `json:"ernaehrungsampelID,omitempty"`
+	NwkjInteger              int64            `json:"nwkjInteger"`
+	NwkcalInteger            int64            `json:"nwkcalInteger"`
+	NwfettDecimal1           float64          `json:"nwfettDecimal1"`
+	NwfettsaeurenDecimal1    float64          `json:"nwfettsaeurenDecimal1"`
+	NwkohlehydrateDecimal1   float64          `json:"nwKohlehydrateDecimal1"`
+	NwzuckerDecimal1         float64          `json:"nwzuckerDecimal1"`
+	NweiweissDecimal1        float64          `json:"nweiweissDecimal1"`
+	NwsalzDecimal1           float64          `json:"nwsalzDecimal1"`
+	NwbeDecimal2             *json.RawMessage `json:"nwbeDecimal2,omitempty"`
+	AllowFeedback            bool             `json:"allowFeedback"`
+	GerichtImage             *json.RawMessage `json:"gerichtImage,omitempty"`
+	Lieferanteninfo          *json.RawMessage `json:"lieferanteninfo,omitempty"`
+	LieferanteninfoLink      *json.RawMessage `json:"lieferanteninfoLink,omitempty"`
+	EdFaktorDecimal1         *json.RawMessage `json:"edFaktorDecimal1,omitempty"`
+	Plu                      *string          `json:"plu,omitempty"`
+	Price3Decimal2           float64          `json:"price3Decimal2"`
+	Price4Decimal2           *json.RawMessage `json:"price4Decimal2,omitempty"`
+	Contingent               *json.RawMessage `json:"contingent,omitempty"`
+	TaxRateDecimal2          *json.RawMessage `json:"taxRateDecimal2,omitempty"`
+	IngredientList           *json.RawMessage `json:"ingredientList,omitempty"`
+	Sustainability           Sustainability   `json:"sustainability"`
 }
 
 type Sustainability struct {
-	CO2        *Co2           `json:"co2,omitempty"`
-	Nutriscore *json.RawMessage `json:"nutriscore,omitempty"`
+	CO2          *Co2             `json:"co2,omitempty"`
+	Nutriscore   *json.RawMessage `json:"nutriscore,omitempty"`
 	TrafficLight *json.RawMessage `json:"trafficLight,omitempty"`
 }
 
 type Co2 struct {
-	ID        int64 `json:"id"`
-	CO2Value  int64 `json:"co2Value"`
-	Unit      Unit  `json:"unit"`
+	ID       int64 `json:"id"`
+	CO2Value int64 `json:"co2Value"`
+	Unit     Unit  `json:"unit"`
 }
 
 type Unit string
@@ -147,13 +147,13 @@ type AdditivesResponse struct {
 }
 
 type AdditivesContent struct {
-	ID              int64         `json:"id"`
-	Name            string        `json:"name"`
-	Kuerzel         string        `json:"kuerzel"`
-	Beschreibung    json.RawMessage `json:"beschreibung"`
-	ZusatzstoffeID  int64         `json:"zusatzstoffeID"`
-	LanguageTypeID  int64         `json:"languageTypeID"`
-	BenutzerID      int64         `json:"benutzerID"`
+	ID             int64           `json:"id"`
+	Name           string          `json:"name"`
+	Kuerzel        string          `json:"kuerzel"`
+	Beschreibung   json.RawMessage `json:"beschreibung"`
+	ZusatzstoffeID int64           `json:"zusatzstoffeID"`
+	LanguageTypeID int64           `json:"languageTypeID"`
+	BenutzerID     int64           `json:"benutzerID"`
 }
 
 type AllergensResponse struct {
@@ -162,50 +162,49 @@ type AllergensResponse struct {
 }
 
 type AllergensContent struct {
-	ID           int64         `json:"id"`
-	Name         string        `json:"name"`
-	AllergeneID  int64         `json:"allergeneID"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	AllergeneID int64  `json:"allergeneID"`
 }
 
-
 type FeatureContent struct {
-	ID                     int64         `json:"id"`
-	Name                   string        `json:"name"`
-	NameAlternative        json.RawMessage `json:"nameAlternative"`
-	Kuerzel                string        `json:"kuerzel"`
-	LogoImage              *string       `json:"logoImage,omitempty"`
-	RGBColor               json.RawMessage `json:"rgbColor"`
-	ReihenfolgeInApp       int64         `json:"reihenfolgeInApp"`
-	ShowInSpeiseplanOverview bool          `json:"showInSpeiseplanOverview"`
-	ShowNotInFilter        bool          `json:"showNotInFilter"`
-	Beschreibung           json.RawMessage `json:"beschreibung"`
-	GerichtmerkmalID       int64         `json:"gerichtmerkmalID"`
-	LanguageTypeID         int64         `json:"languageTypeID"`
-	TimestampLog           string        `json:"timestampLog"`
-	BenutzerID             int64         `json:"benutzerID"`
+	ID                       int64           `json:"id"`
+	Name                     string          `json:"name"`
+	NameAlternative          json.RawMessage `json:"nameAlternative"`
+	Kuerzel                  string          `json:"kuerzel"`
+	LogoImage                *string         `json:"logoImage,omitempty"`
+	RGBColor                 json.RawMessage `json:"rgbColor"`
+	ReihenfolgeInApp         int64           `json:"reihenfolgeInApp"`
+	ShowInSpeiseplanOverview bool            `json:"showInSpeiseplanOverview"`
+	ShowNotInFilter          bool            `json:"showNotInFilter"`
+	Beschreibung             json.RawMessage `json:"beschreibung"`
+	GerichtmerkmalID         int64           `json:"gerichtmerkmalID"`
+	LanguageTypeID           int64           `json:"languageTypeID"`
+	TimestampLog             string          `json:"timestampLog"`
+	BenutzerID               int64           `json:"benutzerID"`
 }
 
 type MensaRequest struct {
 	Food      []FoodContent      `json:"food"`
-	Additives []AdditivesContent  `json:"additives"`
-	Allergens []AllergensContent  `json:"allergens"`
-	Features  []FeatureContent    `json:"features"`
+	Additives []AdditivesContent `json:"additives"`
+	Allergens []AllergensContent `json:"allergens"`
+	Features  []FeatureContent   `json:"features"`
 }
 
 type Recipe struct {
-	Title    string   `json:"title"`
-	Diet     Diet     `json:"diet"`
-	Prices   Prices   `json:"prices"`
+	Title     string    `json:"title"`
+	Diet      Diet      `json:"diet"`
+	Prices    Prices    `json:"prices"`
 	Nutrients Nutrients `json:"nutrients"`
 }
 
 type Diet string
 
 const (
-	DietVegan       Diet = "Vegan"
-	DietVegetarian  Diet = "Vegetarian"
-	DietMeat        Diet = "Meat"
-	DietFish        Diet = "Fish"
+	DietVegan      Diet = "Vegan"
+	DietVegetarian Diet = "Vegetarian"
+	DietMeat       Diet = "Meat"
+	DietFish       Diet = "Fish"
 )
 
 type Prices struct {
@@ -215,55 +214,54 @@ type Prices struct {
 }
 
 type Nutrients struct {
-	Calories          float64 `json:"calories"`
-	Protein           float64 `json:"protein"`
-	Fat               float64 `json:"fat"`
-	SaturatedFat      float64 `json:"saturatedFat"`
-	Carbs             float64 `json:"carbs"`
-	Sugar             float64 `json:"sugar"`
-	Salt              float64 `json:"salt"`
+	Calories     float64 `json:"calories"`
+	Protein      float64 `json:"protein"`
+	Fat          float64 `json:"fat"`
+	SaturatedFat float64 `json:"saturatedFat"`
+	Carbs        float64 `json:"carbs"`
+	Sugar        float64 `json:"sugar"`
+	Salt         float64 `json:"salt"`
 }
 
 type Features string
 
 const (
-	FeatureVegetarian     Features = "Vegetarian"
-	FeatureVegan          Features = "Vegan"
-	FeaturePoultry        Features = "Poultry"
-	FeatureBeef           Features = "Beef"
-	FeaturePork           Features = "Pork"
-	FeatureGame           Features = "Game"
-	FeatureRegional       Features = "Regional"
-	FeatureAlcohol        Features = "Alcohol"
-	FeatureFish           Features = "Fish"
-	FeatureLamb           Features = "Lamb"
-	FeatureGarlic         Features = "Garlic"
-	FeatureBear           Features = "Bear"
-	FeatureLeek           Features = "Leek"
-	FeatureRennet         Features = "Rennet"
+	FeatureVegetarian Features = "Vegetarian"
+	FeatureVegan      Features = "Vegan"
+	FeaturePoultry    Features = "Poultry"
+	FeatureBeef       Features = "Beef"
+	FeaturePork       Features = "Pork"
+	FeatureGame       Features = "Game"
+	FeatureRegional   Features = "Regional"
+	FeatureAlcohol    Features = "Alcohol"
+	FeatureFish       Features = "Fish"
+	FeatureLamb       Features = "Lamb"
+	FeatureGarlic     Features = "Garlic"
+	FeatureBear       Features = "Bear"
+	FeatureLeek       Features = "Leek"
+	FeatureRennet     Features = "Rennet"
 )
 
 type FeatureList struct {
-	Vegetarian       []int64 `json:"vegetarian"`
-	Vegan            []int64 `json:"vegan"`
-	Poultry          []int64 `json:"poultry"`
-		Beef             []int64 `json:"beef"`
-		Pork             []int64 `json:"pork"`
-		Game             []int64 `json:"game"`
-		Regional         []int64 `json:"regional"`
-		Alcohol          []int64 `json:"alcohol"`
-		Fish             []int64 `json:"fish"`
-		Lamb             []int64 `json:"lamb"`
-		GarlicBearLeek   []int64 `json:"garlicBearLeek"`
-		Rennet           []int64 `json:"rennet"`
+	Vegetarian     []int64 `json:"vegetarian"`
+	Vegan          []int64 `json:"vegan"`
+	Poultry        []int64 `json:"poultry"`
+	Beef           []int64 `json:"beef"`
+	Pork           []int64 `json:"pork"`
+	Game           []int64 `json:"game"`
+	Regional       []int64 `json:"regional"`
+	Alcohol        []int64 `json:"alcohol"`
+	Fish           []int64 `json:"fish"`
+	Lamb           []int64 `json:"lamb"`
+	GarlicBearLeek []int64 `json:"garlicBearLeek"`
+	Rennet         []int64 `json:"rennet"`
 }
 
-
 func ParsePotsdamMensaData(mensa payload.Mensa) (*[]FoodContent, error) {
-    body, err := sendRequestToSWT(FoodModel, mensa, payload.DE)
-    if err != nil {
-    	return nil, err
-    }
+	body, err := sendRequestToSWT(FoodModel, mensa, payload.DE)
+	if err != nil {
+		return nil, err
+	}
 
 	var foodResponse SWTResponse[FoodContent]
 	// Parse the JSON data into the struct
@@ -278,14 +276,14 @@ func ParsePotsdamMensaData(mensa payload.Mensa) (*[]FoodContent, error) {
 }
 
 type MealCategoryResponse struct {
-	Success bool `json:"success"`
+	Success bool           `json:"success"`
 	Content []MealCategory `json:"content"`
 }
 
 type MealCategory struct {
-	ID int64 `json:"gerichtkategorieID"`
-	Name string `json:"name"`
-	LanguageType int64 `json:"languageTypeID"`
+	ID           int64  `json:"gerichtkategorieID"`
+	Name         string `json:"name"`
+	LanguageType int64  `json:"languageTypeID"`
 }
 
 func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
@@ -320,7 +318,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwkcalInteger),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Kalorien",
 			payload.EN: "Calories",
 		},
@@ -337,7 +335,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwfettDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Fett",
 			payload.EN: "Fat",
 		},
@@ -354,7 +352,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwfettsaeurenDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Gesättigte Fettsäuren",
 			payload.EN: "Saturated Fatty Acids",
 		},
@@ -371,7 +369,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwkohlehydrateDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Kohlenhydrate",
 			payload.EN: "Carbohydrates",
 		},
@@ -388,7 +386,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwzuckerDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Zucker",
 			payload.EN: "Sugar",
 		},
@@ -405,7 +403,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NweiweissDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Eiweiß",
 			payload.EN: "Protein",
 		},
@@ -422,7 +420,7 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 				Value: float64(food.Zusatzinformationen.NwsalzDecimal1),
 			},
 		},
-		Name: payload.LocalizedString {
+		Name: payload.LocalizedString{
 			payload.DE: "Salz",
 			payload.EN: "Salt",
 		},
@@ -431,9 +429,8 @@ func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, er
 	return &nutrients, nil
 }
 
-
 type AdditiveResponse struct {
-	ID int64 `json:"zusatzstoffeID"`
+	ID   int64  `json:"zusatzstoffeID"`
 	Name string `json:"name"`
 }
 
@@ -492,7 +489,7 @@ func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.L
 }
 
 type AllergenResponse struct {
-	ID int64 `json:"allergeneID"`
+	ID   int64  `json:"allergeneID"`
 	Name string `json:"name"`
 }
 
@@ -553,7 +550,7 @@ func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.L
 }
 
 type FeatureResponse struct {
-	ID int64 `json:"gerichtmerkmalID"`
+	ID   int64  `json:"gerichtmerkmalID"`
 	Name string `json:"name"`
 }
 

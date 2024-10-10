@@ -9,17 +9,19 @@ import (
 )
 
 type Mensa int
+
 const (
-	NeuesPalais Mensa = 9600
-	Griebnitzsee Mensa = 9601
-	Golm Mensa = 9602
+	NeuesPalais      Mensa = 9600
+	Griebnitzsee     Mensa = 9601
+	Golm             Mensa = 9602
 	Filmuniversitaet Mensa = 9603
-	FHP Mensa = 9604
-	Wildau Mensa = 9605
-	Brandenburg Mensa = 9606
+	FHP              Mensa = 9604
+	Wildau           Mensa = 9605
+	Brandenburg      Mensa = 9606
 )
 
 type Language int
+
 const (
 	DE Language = iota + 1
 	EN
@@ -38,16 +40,16 @@ type LocalizedValue[T any] struct {
 
 type LocalNutrient struct {
 	Nutrient Nutrient
-	Name LocalizedString
+	Name     LocalizedString
 }
 
 type LocalRecipe struct {
-	Locales []Locale
-	Allergen       *[][]Locale
-	Additives      *[][]Locale
-	Features	   *[][]Locale
-	Nutrients      *[]LocalNutrient
-	Recipe 	   Recipe
+	Locales   []Locale
+	Allergen  *[][]Locale
+	Additives *[][]Locale
+	Features  *[][]Locale
+	Nutrients *[]LocalNutrient
+	Recipe    Recipe
 }
 
 type Recipe struct {
@@ -55,25 +57,27 @@ type Recipe struct {
 	PriceStudents  *float64
 	PriceEmployees *float64
 	PriceGuests    *float64
-	MensaProvider  int64       `gorm:"column:mensa_provider_id"`
+	MensaProvider  int64 `gorm:"column:mensa_provider_id"`
+	AIThumbnailID  uint  `gorm:"column:ai_thumbnail_id"`
 }
-func (r Recipe) GetID() uint { return r.ID }
+
+func (r Recipe) GetID() uint   { return r.ID }
 func (r Recipe) SetID(id uint) { r.ID = id }
 
 type RecipesRel struct {
-	ID 	 uint `gorm:"primaryKey"`
-	ParentID uint `gorm:"column:parent_id"`
-	Path string
+	ID          uint `gorm:"primaryKey"`
+	ParentID    uint `gorm:"column:parent_id"`
+	Path        string
 	AdditivesID *uint `gorm:"column:additives_id"`
 	AllergensID *uint `gorm:"column:allergens_id"`
-	FeaturesID *uint `gorm:"column:features_id"`
+	FeaturesID  *uint `gorm:"column:features_id"`
 }
 
 type Locale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
 
 type EntityInterface interface {
@@ -90,79 +94,84 @@ type LocaleInterface interface {
 }
 
 type AdditivesLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
+
 // Implement LocaleInterface methods for each locale type
-func (l AdditivesLocale) GetID() uint      { return l.ID }
-func (l AdditivesLocale) GetName() string  { return l.Name }
-func (l AdditivesLocale) GetLocale() string { return l.Locale }
-func (l AdditivesLocale) GetParentID() uint { return l.ParentID }
+func (l AdditivesLocale) GetID() uint          { return l.ID }
+func (l AdditivesLocale) GetName() string      { return l.Name }
+func (l AdditivesLocale) GetLocale() string    { return l.Locale }
+func (l AdditivesLocale) GetParentID() uint    { return l.ParentID }
 func (l *AdditivesLocale) SetParentID(id uint) { l.ParentID = id }
 
 type RecipesLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
-func (l RecipesLocale) GetID() uint      { return l.ID }
-func (l RecipesLocale) GetName() string  { return l.Name }
-func (l RecipesLocale) GetLocale() string { return l.Locale }
-func (l RecipesLocale) GetParentID() uint { return l.ParentID }
+
+func (l RecipesLocale) GetID() uint          { return l.ID }
+func (l RecipesLocale) GetName() string      { return l.Name }
+func (l RecipesLocale) GetLocale() string    { return l.Locale }
+func (l RecipesLocale) GetParentID() uint    { return l.ParentID }
 func (l *RecipesLocale) SetParentID(id uint) { l.ParentID = id }
 
 type AllergensLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
-func (l AllergensLocale) GetID() uint      { return l.ID }
-func (l AllergensLocale) GetName() string  { return l.Name }
-func (l AllergensLocale) GetLocale() string { return l.Locale }
-func (l AllergensLocale) GetParentID() uint { return l.ParentID }
+
+func (l AllergensLocale) GetID() uint          { return l.ID }
+func (l AllergensLocale) GetName() string      { return l.Name }
+func (l AllergensLocale) GetLocale() string    { return l.Locale }
+func (l AllergensLocale) GetParentID() uint    { return l.ParentID }
 func (l *AllergensLocale) SetParentID(id uint) { l.ParentID = id }
 
 type FeaturesLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
-func (l FeaturesLocale) GetID() uint      { return l.ID }
-func (l FeaturesLocale) GetName() string  { return l.Name }
-func (l FeaturesLocale) GetLocale() string { return l.Locale }
-func (l FeaturesLocale) GetParentID() uint { return l.ParentID }
+
+func (l FeaturesLocale) GetID() uint          { return l.ID }
+func (l FeaturesLocale) GetName() string      { return l.Name }
+func (l FeaturesLocale) GetLocale() string    { return l.Locale }
+func (l FeaturesLocale) GetParentID() uint    { return l.ParentID }
 func (l *FeaturesLocale) SetParentID(id uint) { l.ParentID = id }
 
 type NutrientsLocale struct {
-	ID uint `gorm:"primaryKey"`
-	Name string `gorm:"column:name"`
-	Locale string `gorm:"column:_locale"`
-	ParentID uint `gorm:"column:_parent_id"`
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `gorm:"column:name"`
+	Locale   string `gorm:"column:_locale"`
+	ParentID uint   `gorm:"column:_parent_id"`
 }
-func (l NutrientsLocale) GetID() uint      { return l.ID }
-func (l NutrientsLocale) GetName() string  { return l.Name }
-func (l NutrientsLocale) GetLocale() string { return l.Locale }
-func (l NutrientsLocale) GetParentID() uint { return l.ParentID }
+
+func (l NutrientsLocale) GetID() uint          { return l.ID }
+func (l NutrientsLocale) GetName() string      { return l.Name }
+func (l NutrientsLocale) GetLocale() string    { return l.Locale }
+func (l NutrientsLocale) GetParentID() uint    { return l.ParentID }
 func (l *NutrientsLocale) SetParentID(id uint) { l.ParentID = id }
 
-
 type Additive struct {
-	ID   uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey"`
 }
-func (a Additive) GetID() uint { return a.ID }
+
+func (a Additive) GetID() uint   { return a.ID }
 func (a Additive) SetID(id uint) { a.ID = id }
 
 type Allergen struct {
-	ID   uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey"`
 }
-func (a Allergen) GetID() uint { return a.ID }
-func (a Allergen) SetID(id uint) { a.ID = id }
 
+func (a Allergen) GetID() uint   { return a.ID }
+func (a Allergen) SetID(id uint) { a.ID = id }
 
 type Nutrient struct {
 	ID              uint          `gorm:"primaryKey"`
@@ -185,7 +194,8 @@ type NutrientLabel struct {
 	Unit           NutrientUnit `gorm:"foreignKey:unit_id"`
 	Recommendation *string
 }
-func (n NutrientLabel) GetID() uint { return n.ID }
+
+func (n NutrientLabel) GetID() uint   { return n.ID }
 func (n NutrientLabel) SetID(id uint) { n.ID = id }
 
 type NutrientUnit struct {
@@ -193,7 +203,7 @@ type NutrientUnit struct {
 	Name string `gorm:"unique"`
 }
 
-func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa Mensa, db *gorm.DB) {
+func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, db *gorm.DB) {
 	if len(recipe.Locales) == 0 {
 		fmt.Println("No locales provided")
 		return
@@ -203,9 +213,9 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 	// (Title and MensaProvider are unique together)
 	// If it does not exist, insert it
 	count := RecipesLocale{
-		ID: recipe.Recipe.ID,
-		Name: recipe.Locales[0].Name,
-		Locale: recipe.Locales[0].Locale,
+		ID:       recipe.Recipe.ID,
+		Name:     recipe.Locales[0].Name,
+		Locale:   recipe.Locales[0].Locale,
 		ParentID: recipe.Recipe.ID,
 	}
 	db.FirstOrInit(&count, count)
@@ -217,11 +227,11 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 			panic(err)
 		}
 
-		for _ , locale := range recipe.Locales {
+		for _, locale := range recipe.Locales {
 			_locale := RecipesLocale{
 				// ID: locale.ID,
-				Name: locale.Name,
-				Locale: locale.Locale,
+				Name:     locale.Name,
+				Locale:   locale.Locale,
 				ParentID: recipe.Recipe.ID,
 			}
 			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
@@ -232,7 +242,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 		}
 	} else {
 		if err := db.Where(Recipe{
-			ID: count.ParentID,
+			ID:            count.ParentID,
 			MensaProvider: 1,
 		}).Assign(recipe.Recipe).FirstOrCreate(&recipe.Recipe).Error; err != nil {
 			fmt.Println("Error inserting recipe:", err)
@@ -240,9 +250,9 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 		}
 	}
 
-	fmt.Printf("Recipe: %+v\nMensa: %+v\nCount: %+v\n\n", recipe, mensa, count)
+	//fmt.Printf("Recipe: %+v\nMensa: %+v\nCount: %+v\n\n", recipe, mensa, count)
 	// Adding failsafe in case locales are wrongly attributed
-	if (strings.Contains(recipe.Locales[0].Name, "100") && !strings.Contains(recipe.Locales[1].Name, "100")){
+	if strings.Contains(recipe.Locales[0].Name, "100") && !strings.Contains(recipe.Locales[1].Name, "100") {
 		// This is a failsafe for the case that the locales are wrongly attributed
 		// For example: Title DE: Preis je 100 Gramm
 		// EN: Spaghetti Basilikumpesto mit Cashewkernen
@@ -258,7 +268,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 		}
 	}
 
-	if (recipe.Allergen != nil) {
+	if recipe.Allergen != nil {
 		for _, allergens := range *recipe.Allergen {
 			_, err := insertAllergen(allergens, recipe.Recipe, db)
 			if err != nil {
@@ -268,7 +278,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 		}
 	}
 
-	if (recipe.Additives != nil) {
+	if recipe.Additives != nil {
 		for _, additives := range *recipe.Additives {
 			_, err := insertAdditive(additives, recipe.Recipe, db)
 			if err != nil {
@@ -278,7 +288,7 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 		}
 	}
 
-	if (recipe.Features != nil) {
+	if recipe.Features != nil {
 		for _, feature := range *recipe.Features {
 			_, err := insertFeature(feature, recipe.Recipe, db)
 			if err != nil {
@@ -292,26 +302,26 @@ func InsertRecipe(recipe LocalRecipe, date time.Time, language []Language, mensa
 }
 
 type Serving struct {
-	ID 	  uint `gorm:"primaryKey"`
-	Date  time.Time
-	MensaID uint `gorm:"column:mensa_id"`
+	ID       uint `gorm:"primaryKey"`
+	Date     time.Time
+	MensaID  uint `gorm:"column:mensa_id"`
 	RecipeID uint `gorm:"column:recipe_id"`
 }
 
 func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
 	mensaMap := map[Mensa]uint{
-		NeuesPalais: 1,
-		Griebnitzsee: 2,
-		Golm: 3,
+		NeuesPalais:      1,
+		Griebnitzsee:     2,
+		Golm:             3,
 		Filmuniversitaet: 4,
-		FHP: 5,
-		Wildau: 6,
-		Brandenburg: 7,
+		FHP:              5,
+		Wildau:           6,
+		Brandenburg:      7,
 	}
 
 	serving := Serving{
-		Date: date,
-		MensaID: mensaMap[mensa],
+		Date:     date,
+		MensaID:  mensaMap[mensa],
 		RecipeID: recipeID,
 	}
 
@@ -329,10 +339,10 @@ func InsertServing(date time.Time, mensa Mensa, recipeID uint, db *gorm.DB) {
 }
 
 type NutrientLabelsLocale struct {
-	ID             uint `gorm:"primaryKey"`
-	Name 		 string
-	ParentID       uint `gorm:"column:_parent_id"`
-	Locale 	   string `gorm:"column:_locale"`
+	ID       uint `gorm:"primaryKey"`
+	Name     string
+	ParentID uint   `gorm:"column:_parent_id"`
+	Locale   string `gorm:"column:_locale"`
 }
 
 func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB, languages []Language) (*Nutrient, error) {
@@ -360,7 +370,7 @@ func insertNutrient(nutrient Nutrient, name LocalizedString, db *gorm.DB, langua
 	nutrientLocales := make([]NutrientLabelsLocale, 0)
 	for _, language := range languages {
 		localNutrient := NutrientLabelsLocale{
-			Name: name[language],
+			Name:   name[language],
 			Locale: language.String(),
 		}
 		var name NutrientLabelsLocale
@@ -417,8 +427,8 @@ func insertAllergen(allergens []Locale, recipe Recipe, db *gorm.DB) (*Allergen, 
 
 	// Attach the allergens to the recipe using the association method
 	rel := RecipesRel{
-		ParentID: recipe.ID,
-		Path: "allergens",
+		ParentID:    recipe.ID,
+		Path:        "allergens",
 		AllergensID: &allergens[0].ParentID,
 		AdditivesID: nil,
 	}
@@ -441,8 +451,8 @@ func insertAdditive(additiveLocales []Locale, recipe Recipe, db *gorm.DB) (*Addi
 
 	// Attach the additive to the recipe using the association method
 	rel := RecipesRel{
-		ParentID: recipe.ID,
-		Path: "additives",
+		ParentID:    recipe.ID,
+		Path:        "additives",
 		AllergensID: nil,
 		AdditivesID: &additiveLocales[0].ParentID,
 	}
@@ -455,10 +465,11 @@ func insertAdditive(additiveLocales []Locale, recipe Recipe, db *gorm.DB) (*Addi
 }
 
 type Feature struct {
-	ID uint `gorm:"primaryKey"`
+	ID              uint `gorm:"primaryKey"`
 	MensaProviderID uint `gorm:"column:mensa_provider_id"`
 }
-func (f Feature) GetID() uint { return f.ID }
+
+func (f Feature) GetID() uint   { return f.ID }
 func (f Feature) SetID(id uint) { f.ID = id }
 
 func insertFeature(featureLocales []Locale, recipe Recipe, db *gorm.DB) (*Feature, error) {
@@ -474,17 +485,16 @@ func insertFeature(featureLocales []Locale, recipe Recipe, db *gorm.DB) (*Featur
 
 	// Attach the feature to the recipe using the association method
 	rel := RecipesRel{
-		ParentID: recipe.ID,
-		Path: "feature",
+		ParentID:    recipe.ID,
+		Path:        "feature",
 		AllergensID: nil,
 		AdditivesID: nil,
-		FeaturesID: &featureLocales[0].ParentID,
+		FeaturesID:  &featureLocales[0].ParentID,
 	}
 	if err := db.Where(rel).FirstOrCreate(&rel).Error; err != nil {
 		fmt.Println("Error inserting recipe feature:", err)
 		return nil, err
 	}
-
 
 	return featureEntity, nil
 }
@@ -492,16 +502,16 @@ func insertFeature(featureLocales []Locale, recipe Recipe, db *gorm.DB) (*Featur
 func getID[T any](entity T) uint {
 	// return entity.ID
 	switch x := any(entity).(type) {
-		case Additive:
-			return x.ID
-		case Allergen:
-			return x.ID
-		case Feature:
-			return x.ID
-		case Nutrient:
-			return x.ID
-		default:
-			return 0
+	case Additive:
+		return x.ID
+	case Allergen:
+		return x.ID
+	case Feature:
+		return x.ID
+	case Nutrient:
+		return x.ID
+	default:
+		return 0
 	}
 }
 
@@ -513,8 +523,8 @@ func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) (*Locale, 
 	switch any(entity).(type) {
 	case Additive:
 		additiveLocale := AdditivesLocale{
-			Name:     locale.Name,
-			Locale:   locale.Locale,
+			Name:   locale.Name,
+			Locale: locale.Locale,
 			// ParentID: locale.ParentID,
 		}
 		err = db.Where(&additiveLocale).FirstOrInit(&additiveLocale).Error
@@ -525,8 +535,8 @@ func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) (*Locale, 
 		existingLocale = Locale(additiveLocale)
 	case Allergen:
 		allergenLocale := AllergensLocale{
-			Name:     locale.Name,
-			Locale:   locale.Locale,
+			Name:   locale.Name,
+			Locale: locale.Locale,
 			// ParentID: locale.ParentID,
 		}
 		err = db.Where(&allergenLocale).FirstOrInit(&allergenLocale).Error
@@ -537,8 +547,8 @@ func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) (*Locale, 
 		existingLocale = Locale(allergenLocale)
 	case Feature:
 		featureLocale := FeaturesLocale{
-			Name:     locale.Name,
-			Locale:   locale.Locale,
+			Name:   locale.Name,
+			Locale: locale.Locale,
 			// ParentID: locale.ParentID,
 		}
 		err = db.Where(&featureLocale).FirstOrInit(&featureLocale).Error
@@ -549,8 +559,8 @@ func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) (*Locale, 
 		existingLocale = Locale(featureLocale)
 	case Nutrient:
 		nutrientLocale := NutrientsLocale{
-			Name:     locale.Name,
-			Locale:   locale.Locale,
+			Name:   locale.Name,
+			Locale: locale.Locale,
 			// ParentID: locale.ParentID,
 		}
 		err = db.Where(&nutrientLocale).FirstOrInit(&nutrientLocale).Error
@@ -565,7 +575,6 @@ func findOrCreateLocale[T any](db *gorm.DB, locale *Locale, entity T) (*Locale, 
 
 	return &existingLocale, nil
 }
-
 
 func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *[]Locale) (*T, error) {
 	// fmt.Printf("Initial Locales: %+v\n", locales)
@@ -669,7 +678,3 @@ func insertEntityWithLocales[T EntityInterface](db *gorm.DB, entity T, locales *
 
 	return &entity, nil
 }
-
-
-
-// Inserters
