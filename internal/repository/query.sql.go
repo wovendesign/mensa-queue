@@ -77,6 +77,46 @@ func (q *Queries) FindLocale(ctx context.Context, name string) (FindLocaleRow, e
 	return i, err
 }
 
+const insertLocale = `-- name: InsertLocale :one
+INSERT INTO locale (name, locale)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type InsertLocaleParams struct {
+	Name   string               `json:"name"`
+	Locale NullEnumLocaleLocale `json:"locale"`
+}
+
+func (q *Queries) InsertLocale(ctx context.Context, arg InsertLocaleParams) (int32, error) {
+	row := q.db.QueryRow(ctx, insertLocale, arg.Name, arg.Locale)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertLocaleRel = `-- name: InsertLocaleRel :exec
+INSERT INTO locale_rels (parent_id, path, recipes_id, features_id)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertLocaleRelParams struct {
+	ParentID   int32       `json:"parent_id"`
+	Path       string      `json:"path"`
+	RecipesID  pgtype.Int4 `json:"recipes_id"`
+	FeaturesID pgtype.Int4 `json:"features_id"`
+}
+
+func (q *Queries) InsertLocaleRel(ctx context.Context, arg InsertLocaleRelParams) error {
+	_, err := q.db.Exec(ctx, insertLocaleRel,
+		arg.ParentID,
+		arg.Path,
+		arg.RecipesID,
+		arg.FeaturesID,
+	)
+	return err
+}
+
 const insertRecipe = `-- name: InsertRecipe :one
 INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id)
 VALUES ($1, $2, $3, $4)

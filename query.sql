@@ -22,3 +22,12 @@ SELECT $1, $2, $3
 INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id)
 VALUES ($1, $2, $3, $4)
 RETURNING id;
+
+-- name: InsertLocale :one
+INSERT INTO locale (name, locale)
+VALUES ($1, $2)
+RETURNING id;
+
+-- name: InsertLocaleRel :exec
+INSERT INTO locale_rels (parent_id, path, recipes_id, features_id)
+VALUES ($1, $2, $3, $4);

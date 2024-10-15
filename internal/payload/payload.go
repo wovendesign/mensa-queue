@@ -43,6 +43,37 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert recipe: %v\n", err)
 		}
+
+		// Insert Locales
+		for _, locale := range recipe.Locales {
+			var localeCode repository.EnumLocaleLocale
+			if locale.Locale == "de" {
+				localeCode = repository.EnumLocaleLocaleDe
+			} else if locale.Locale == "en" {
+				localeCode = repository.EnumLocaleLocaleEn
+			}
+			id2, err := repo.InsertLocale(ctx, repository.InsertLocaleParams{
+				Name: locale.Name,
+				Locale: repository.NullEnumLocaleLocale{
+					EnumLocaleLocale: localeCode,
+				},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+			}
+
+			err = repo.InsertLocaleRel(ctx, repository.InsertLocaleRelParams{
+				ParentID: id2,
+				Path:     "recipe",
+				RecipesID: pgtype.Int4{
+					Int32: recipeID,
+				},
+				FeaturesID: pgtype.Int4{},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+			}
+		}
 	} else {
 		if locales[0].RecipesID.Valid {
 			recipeID = locales[0].RecipesID.Int32
