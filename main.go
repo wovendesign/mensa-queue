@@ -1,50 +1,51 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"gorm.io/driver/postgres"
+	"github.com/jackc/pgx/v5"
 	"log"
 	"mensa-queue/internal/images"
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
-
 	"time"
-
-	"gorm.io/gorm"
 )
 
 var recipes images.Recipes
 
 func main() {
+	ctx := context.Background()
+
+	//databaseURL := os.Getenv("DATABASE_URL")
+	databaseURL := "postgres://mensauser:postgres@127.0.0.1:5432/mensahhub"
+
 	for {
 		// Database connection
-		dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
-		db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		conn, err := pgx.Connect(ctx, databaseURL)
 		if err != nil {
-			panic("failed to connect database")
+			fmt.Printf("Unable to connect to database: %v\n", err)
+			panic(err)
 		}
 
-		getAllMensas(db)
+		getAllMensas(ctx, conn)
 
 		// TODO: Check if ComfyUI is reachable (only when my PC is on)
-		go images.GenerateImages(recipes)
+		// go images.GenerateImages(recipes)
 
-		if conn, err := db.DB(); err == nil {
-			_ = conn.Close()
-		}
+		conn.Close(ctx)
 
 		time.Sleep(time.Hour)
 	}
 }
 
-func getAllMensas(db *gorm.DB) {
+func getAllMensas(ctx context.Context, conn *pgx.Conn) {
 	mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
 	for _, mensa := range mensas {
-		getMensaData(mensa, db)
+		getMensaData(mensa, ctx, conn)
 	}
 }
 
-func getMensaData(mensa payload.Mensa, db *gorm.DB) {
+func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 	languages := []payload.Language{payload.EN, payload.DE}
 	foodContent, err := parsers.ParsePotsdamMensaData(mensa)
 	if err != nil {
@@ -125,12 +126,16 @@ func getMensaData(mensa payload.Mensa, db *gorm.DB) {
 				return
 			}
 
-			payload.InsertRecipe(recipe, t, languages, mensa, db)
+			_, err = payload.InsertRecipe(recipe, t, languages, mensa, ctx, conn)
+			if err != nil {
+				fmt.Println("Error inserting recipe:", err)
+				continue
+			}
 
-			recipes = append(recipes, &images.RecipeData{
-				ID:     recipe.Recipe.ID,
-				Prompt: food.Zusatzinformationen.GerichtnameAlternative,
-			})
+			//recipes = append(recipes, &images.RecipeData{
+			//	ID:     recipeId,
+			//	Prompt: food.Zusatzinformationen.GerichtnameAlternative,
+			//})
 		}
 	}
 }
