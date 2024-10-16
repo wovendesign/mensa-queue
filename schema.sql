@@ -334,7 +334,7 @@ ALTER SEQUENCE public.info_id_seq OWNED BY public.info.id;
 CREATE TABLE public.locale (
     id integer NOT NULL,
     name character varying NOT NULL,
-    locale public.enum_locale_locale,
+    locale public.enum_locale_locale NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
     created_at timestamp(3) with time zone DEFAULT now() NOT NULL
 );

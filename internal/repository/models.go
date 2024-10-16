@@ -149,10 +149,10 @@ type Additive struct {
 }
 
 type AdditivesLocale struct {
-	Name     pgtype.Text `json:"name"`
-	ID       int32       `json:"id"`
-	Locale   Locales     `json:"_locale"`
-	ParentID int32       `json:"_parent_id"`
+	Name     *string `json:"name"`
+	ID       int32   `json:"id"`
+	Locale   Locales `json:"_locale"`
+	ParentID int32   `json:"_parent_id"`
 }
 
 type Allergen struct {
@@ -162,48 +162,48 @@ type Allergen struct {
 }
 
 type AllergensLocale struct {
-	Name     pgtype.Text `json:"name"`
-	ID       int32       `json:"id"`
-	Locale   Locales     `json:"_locale"`
-	ParentID int32       `json:"_parent_id"`
+	Name     *string `json:"name"`
+	ID       int32   `json:"id"`
+	Locale   Locales `json:"_locale"`
+	ParentID int32   `json:"_parent_id"`
 }
 
 type Feature struct {
 	ID              int32              `json:"id"`
-	MensaProviderID pgtype.Int4        `json:"mensa_provider_id"`
+	MensaProviderID *int32             `json:"mensa_provider_id"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type FeaturesLocale struct {
-	Name     pgtype.Text `json:"name"`
-	ID       int32       `json:"id"`
-	Locale   Locales     `json:"_locale"`
-	ParentID int32       `json:"_parent_id"`
+	Name     *string `json:"name"`
+	ID       int32   `json:"id"`
+	Locale   Locales `json:"_locale"`
+	ParentID int32   `json:"_parent_id"`
 }
 
 type Info struct {
 	ID        int32              `json:"id"`
-	Title     pgtype.Text        `json:"title"`
+	Title     *string            `json:"title"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Locale struct {
-	ID        int32                `json:"id"`
-	Name      string               `json:"name"`
-	Locale    NullEnumLocaleLocale `json:"locale"`
-	UpdatedAt pgtype.Timestamptz   `json:"updated_at"`
-	CreatedAt pgtype.Timestamptz   `json:"created_at"`
+	ID        int32              `json:"id"`
+	Name      string             `json:"name"`
+	Locale    EnumLocaleLocale   `json:"locale"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type LocaleRel struct {
-	ID         int32       `json:"id"`
-	Order      pgtype.Int4 `json:"order"`
-	ParentID   int32       `json:"parent_id"`
-	Path       string      `json:"path"`
-	RecipesID  pgtype.Int4 `json:"recipes_id"`
-	FeaturesID pgtype.Int4 `json:"features_id"`
+	ID         int32  `json:"id"`
+	Order      *int32 `json:"order"`
+	ParentID   int32  `json:"parent_id"`
+	Path       string `json:"path"`
+	RecipesID  *int32 `json:"recipes_id"`
+	FeaturesID *int32 `json:"features_id"`
 }
 
 type Medium struct {
@@ -211,10 +211,10 @@ type Medium struct {
 	Alt          string             `json:"alt"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	Url          pgtype.Text        `json:"url"`
-	ThumbnailURL pgtype.Text        `json:"thumbnail_u_r_l"`
-	Filename     pgtype.Text        `json:"filename"`
-	MimeType     pgtype.Text        `json:"mime_type"`
+	Url          *string            `json:"url"`
+	ThumbnailURL *string            `json:"thumbnail_u_r_l"`
+	Filename     *string            `json:"filename"`
+	MimeType     *string            `json:"mime_type"`
 	Filesize     pgtype.Numeric     `json:"filesize"`
 	Width        pgtype.Numeric     `json:"width"`
 	Height       pgtype.Numeric     `json:"height"`
@@ -225,14 +225,14 @@ type Medium struct {
 type Mensa struct {
 	ID                 int32              `json:"id"`
 	Name               string             `json:"name"`
-	Slug               pgtype.Text        `json:"slug"`
+	Slug               *string            `json:"slug"`
 	AddressLatitude    pgtype.Numeric     `json:"address_latitude"`
 	AddressLongitude   pgtype.Numeric     `json:"address_longitude"`
-	AddressStreet      pgtype.Text        `json:"address_street"`
-	AddressHouseNumber pgtype.Text        `json:"address_house_number"`
-	AddressZipCode     pgtype.Text        `json:"address_zip_code"`
-	AddressCity        pgtype.Text        `json:"address_city"`
-	Description        pgtype.Text        `json:"description"`
+	AddressStreet      *string            `json:"address_street"`
+	AddressHouseNumber *string            `json:"address_house_number"`
+	AddressZipCode     *string            `json:"address_zip_code"`
+	AddressCity        *string            `json:"address_city"`
+	Description        *string            `json:"description"`
 	ProviderID         int32              `json:"provider_id"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
@@ -241,7 +241,7 @@ type Mensa struct {
 type MensaProvider struct {
 	ID          int32              `json:"id"`
 	Name        string             `json:"name"`
-	Slug        pgtype.Text        `json:"slug"`
+	Slug        *string            `json:"slug"`
 	Description string             `json:"description"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
@@ -249,9 +249,9 @@ type MensaProvider struct {
 
 type Nutrient struct {
 	ID              int32              `json:"id"`
-	NutrientValueID pgtype.Int4        `json:"nutrient_value_id"`
-	NutrientLabelID pgtype.Int4        `json:"nutrient_label_id"`
-	RecipeID        pgtype.Int4        `json:"recipe_id"`
+	NutrientValueID *int32             `json:"nutrient_value_id"`
+	NutrientLabelID *int32             `json:"nutrient_label_id"`
+	RecipeID        *int32             `json:"recipe_id"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
@@ -259,7 +259,7 @@ type Nutrient struct {
 type NutrientLabel struct {
 	ID             int32              `json:"id"`
 	UnitID         int32              `json:"unit_id"`
-	Recommendation pgtype.Text        `json:"recommendation"`
+	Recommendation *string            `json:"recommendation"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
@@ -287,39 +287,39 @@ type NutrientValue struct {
 
 type PayloadLockedDocument struct {
 	ID         int32              `json:"id"`
-	GlobalSlug pgtype.Text        `json:"global_slug"`
+	GlobalSlug *string            `json:"global_slug"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type PayloadLockedDocumentsRel struct {
-	ID                 int32       `json:"id"`
-	Order              pgtype.Int4 `json:"order"`
-	ParentID           int32       `json:"parent_id"`
-	Path               string      `json:"path"`
-	UsersID            pgtype.Int4 `json:"users_id"`
-	MediaID            pgtype.Int4 `json:"media_id"`
-	MensaProviderID    pgtype.Int4 `json:"mensa_provider_id"`
-	MensaID            pgtype.Int4 `json:"mensa_id"`
-	ServingTimeID      pgtype.Int4 `json:"serving_time_id"`
-	TimeSlotID         pgtype.Int4 `json:"time_slot_id"`
-	ServingsID         pgtype.Int4 `json:"servings_id"`
-	InfoID             pgtype.Int4 `json:"info_id"`
-	NutrientsID        pgtype.Int4 `json:"nutrients_id"`
-	NutrientUnitsID    pgtype.Int4 `json:"nutrient_units_id"`
-	NutrientLabelsID   pgtype.Int4 `json:"nutrient_labels_id"`
-	NutrientValuesID   pgtype.Int4 `json:"nutrient_values_id"`
-	AllergensID        pgtype.Int4 `json:"allergens_id"`
-	AdditivesID        pgtype.Int4 `json:"additives_id"`
-	RecipesID          pgtype.Int4 `json:"recipes_id"`
-	UserImageUploadsID pgtype.Int4 `json:"user_image_uploads_id"`
-	FeaturesID         pgtype.Int4 `json:"features_id"`
-	LocaleID           pgtype.Int4 `json:"locale_id"`
+	ID                 int32  `json:"id"`
+	Order              *int32 `json:"order"`
+	ParentID           int32  `json:"parent_id"`
+	Path               string `json:"path"`
+	UsersID            *int32 `json:"users_id"`
+	MediaID            *int32 `json:"media_id"`
+	MensaProviderID    *int32 `json:"mensa_provider_id"`
+	MensaID            *int32 `json:"mensa_id"`
+	ServingTimeID      *int32 `json:"serving_time_id"`
+	TimeSlotID         *int32 `json:"time_slot_id"`
+	ServingsID         *int32 `json:"servings_id"`
+	InfoID             *int32 `json:"info_id"`
+	NutrientsID        *int32 `json:"nutrients_id"`
+	NutrientUnitsID    *int32 `json:"nutrient_units_id"`
+	NutrientLabelsID   *int32 `json:"nutrient_labels_id"`
+	NutrientValuesID   *int32 `json:"nutrient_values_id"`
+	AllergensID        *int32 `json:"allergens_id"`
+	AdditivesID        *int32 `json:"additives_id"`
+	RecipesID          *int32 `json:"recipes_id"`
+	UserImageUploadsID *int32 `json:"user_image_uploads_id"`
+	FeaturesID         *int32 `json:"features_id"`
+	LocaleID           *int32 `json:"locale_id"`
 }
 
 type PayloadMigration struct {
 	ID        int32              `json:"id"`
-	Name      pgtype.Text        `json:"name"`
+	Name      *string            `json:"name"`
 	Batch     pgtype.Numeric     `json:"batch"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -327,23 +327,23 @@ type PayloadMigration struct {
 
 type PayloadPreference struct {
 	ID        int32              `json:"id"`
-	Key       pgtype.Text        `json:"key"`
+	Key       *string            `json:"key"`
 	Value     []byte             `json:"value"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type PayloadPreferencesRel struct {
-	ID       int32       `json:"id"`
-	Order    pgtype.Int4 `json:"order"`
-	ParentID int32       `json:"parent_id"`
-	Path     string      `json:"path"`
-	UsersID  pgtype.Int4 `json:"users_id"`
+	ID       int32  `json:"id"`
+	Order    *int32 `json:"order"`
+	ParentID int32  `json:"parent_id"`
+	Path     string `json:"path"`
+	UsersID  *int32 `json:"users_id"`
 }
 
 type Recipe struct {
 	ID              int32              `json:"id"`
-	AiThumbnailID   pgtype.Int4        `json:"ai_thumbnail_id"`
+	AiThumbnailID   *int32             `json:"ai_thumbnail_id"`
 	PriceStudents   pgtype.Numeric     `json:"price_students"`
 	PriceEmployees  pgtype.Numeric     `json:"price_employees"`
 	PriceGuests     pgtype.Numeric     `json:"price_guests"`
@@ -360,27 +360,27 @@ type RecipesLocale struct {
 }
 
 type RecipesRel struct {
-	ID          int32       `json:"id"`
-	Order       pgtype.Int4 `json:"order"`
-	ParentID    int32       `json:"parent_id"`
-	Path        string      `json:"path"`
-	FeaturesID  pgtype.Int4 `json:"features_id"`
-	AdditivesID pgtype.Int4 `json:"additives_id"`
-	AllergensID pgtype.Int4 `json:"allergens_id"`
+	ID          int32  `json:"id"`
+	Order       *int32 `json:"order"`
+	ParentID    int32  `json:"parent_id"`
+	Path        string `json:"path"`
+	FeaturesID  *int32 `json:"features_id"`
+	AdditivesID *int32 `json:"additives_id"`
+	AllergensID *int32 `json:"allergens_id"`
 }
 
 type Serving struct {
 	ID        int32              `json:"id"`
 	RecipeID  int32              `json:"recipe_id"`
 	Date      pgtype.Timestamptz `json:"date"`
-	MensaID   pgtype.Int4        `json:"mensa_id"`
+	MensaID   *int32             `json:"mensa_id"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type ServingTime struct {
 	ID          int32                  `json:"id"`
-	MensaInfoID pgtype.Int4            `json:"mensa_info_id"`
+	MensaInfoID *int32                 `json:"mensa_info_id"`
 	Day         NullEnumServingTimeDay `json:"day"`
 	UpdatedAt   pgtype.Timestamptz     `json:"updated_at"`
 	CreatedAt   pgtype.Timestamptz     `json:"created_at"`
@@ -388,7 +388,7 @@ type ServingTime struct {
 
 type TimeSlot struct {
 	ID            int32              `json:"id"`
-	ServingTimeID pgtype.Int4        `json:"serving_time_id"`
+	ServingTimeID *int32             `json:"serving_time_id"`
 	From          pgtype.Timestamptz `json:"from"`
 	To            pgtype.Timestamptz `json:"to"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
@@ -400,10 +400,10 @@ type User struct {
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	Email                   string             `json:"email"`
-	ResetPasswordToken      pgtype.Text        `json:"reset_password_token"`
+	ResetPasswordToken      *string            `json:"reset_password_token"`
 	ResetPasswordExpiration pgtype.Timestamptz `json:"reset_password_expiration"`
-	Salt                    pgtype.Text        `json:"salt"`
-	Hash                    pgtype.Text        `json:"hash"`
+	Salt                    *string            `json:"salt"`
+	Hash                    *string            `json:"hash"`
 	LoginAttempts           pgtype.Numeric     `json:"login_attempts"`
 	LockUntil               pgtype.Timestamptz `json:"lock_until"`
 }

@@ -8,6 +8,7 @@ import (
 	"mensa-queue/internal/images"
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
+	"mensa-queue/internal/repository"
 	"time"
 )
 
@@ -99,14 +100,14 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 			}
 
 			recipe := &payload.LocalRecipe{
-				Locales: []payload.Locale{
+				Locales: []repository.InsertLocaleParams{
 					{
 						Name:   food.SpeiseplanAdvancedGericht.RecipeName,
-						Locale: "de",
+						Locale: repository.EnumLocaleLocaleDe,
 					},
 					{
 						Name:   food.Zusatzinformationen.GerichtnameAlternative,
-						Locale: "en",
+						Locale: repository.EnumLocaleLocaleEn,
 					},
 				},
 				Recipe: payload.Recipe{
@@ -129,6 +130,7 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 			_, err = payload.InsertRecipe(recipe, t, languages, mensa, ctx, conn)
 			if err != nil {
 				fmt.Println("Error inserting recipe:", err)
+				panic(err)
 				continue
 			}
 

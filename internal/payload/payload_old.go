@@ -2,13 +2,13 @@ package payload
 
 import (
 	"fmt"
-	"strings"
+	"mensa-queue/internal/repository"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-type Mensa int
+type Mensa int32
 
 const (
 	NeuesPalais      Mensa = 9600
@@ -44,7 +44,7 @@ type LocalNutrient struct {
 }
 
 type LocalRecipe struct {
-	Locales   []Locale
+	Locales   []repository.InsertLocaleParams
 	Allergen  *[][]Locale
 	Additives *[][]Locale
 	Features  *[][]Locale
@@ -201,104 +201,6 @@ func (n NutrientLabel) SetID(id uint) { n.ID = id }
 type NutrientUnit struct {
 	ID   uint   `gorm:"primaryKey"`
 	Name string `gorm:"unique"`
-}
-
-func _InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, db *gorm.DB) {
-	if len(recipe.Locales) == 0 {
-		fmt.Println("No locales provided")
-		return
-	}
-
-	// Check if recipe already exists
-	// (Title and MensaProvider are unique together)
-	// If it does not exist, insert it
-	count := RecipesLocale{
-		ID:       recipe.Recipe.ID,
-		Name:     recipe.Locales[0].Name,
-		Locale:   recipe.Locales[0].Locale,
-		ParentID: recipe.Recipe.ID,
-	}
-	db.FirstOrInit(&count, count)
-
-	if count.ID == 0 {
-		// Create Recipe without title
-		if err := db.Create(&recipe.Recipe).Error; err != nil {
-			fmt.Println("Error inserting recipe:", err)
-			panic(err)
-		}
-
-		for _, locale := range recipe.Locales {
-			_locale := RecipesLocale{
-				// ID: locale.ID,
-				Name:     locale.Name,
-				Locale:   locale.Locale,
-				ParentID: recipe.Recipe.ID,
-			}
-			if err := db.FirstOrCreate(&_locale, _locale).Error; err != nil {
-				fmt.Println("Error inserting locale:", err)
-				panic(err)
-			}
-			locale = Locale(_locale)
-		}
-	} else {
-		if err := db.Where(Recipe{
-			ID:            count.ParentID,
-			MensaProvider: 1,
-		}).Assign(recipe.Recipe).FirstOrCreate(&recipe.Recipe).Error; err != nil {
-			fmt.Println("Error inserting recipe:", err)
-			panic(err)
-		}
-	}
-
-	//fmt.Printf("Recipe: %+v\nMensa: %+v\nCount: %+v\n\n", recipe, mensa, count)
-	// Adding failsafe in case locales are wrongly attributed
-	if strings.Contains(recipe.Locales[0].Name, "100") && !strings.Contains(recipe.Locales[1].Name, "100") {
-		// This is a failsafe for the case that the locales are wrongly attributed
-		// For example: Title DE: Preis je 100 Gramm
-		// EN: Spaghetti Basilikumpesto mit Cashewkernen
-		return
-	}
-
-	for _, nutrient := range *recipe.Nutrients {
-		nutrient.Nutrient.RecipeID = recipe.Recipe.ID
-		_, err := insertNutrient(nutrient.Nutrient, nutrient.Name, db, language)
-		if err != nil {
-			fmt.Println("Error inserting nutrient:", err)
-			panic(err)
-		}
-	}
-
-	if recipe.Allergen != nil {
-		for _, allergens := range *recipe.Allergen {
-			_, err := insertAllergen(allergens, recipe.Recipe, db)
-			if err != nil {
-				fmt.Println("Error inserting allergen:", err)
-				panic(err)
-			}
-		}
-	}
-
-	if recipe.Additives != nil {
-		for _, additives := range *recipe.Additives {
-			_, err := insertAdditive(additives, recipe.Recipe, db)
-			if err != nil {
-				fmt.Println("Error inserting additive:", err)
-				panic(err)
-			}
-		}
-	}
-
-	if recipe.Features != nil {
-		for _, feature := range *recipe.Features {
-			_, err := insertFeature(feature, recipe.Recipe, db)
-			if err != nil {
-				fmt.Println("Error inserting feature: ", err)
-				return
-			}
-		}
-	}
-
-	InsertServing(date, mensa, recipe.Recipe.ID, db)
 }
 
 type Serving struct {
