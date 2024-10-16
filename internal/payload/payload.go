@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int, err error) {
+func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
 	repo := repository.New(conn)
 
 	if len(recipe.Locales) == 0 {
@@ -32,9 +32,9 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 	if len(locales) == 0 {
 		// Create New Recipe
 		recipeID, err = repo.InsertRecipe(ctx, repository.InsertRecipeParams{
-			PriceStudents:   *recipe.Recipe.PriceStudents,
-			PriceEmployees:  0.0,
-			PriceGuests:     0.0,
+			PriceStudents:   recipe.Recipe.PriceStudents,
+			PriceEmployees:  recipe.Recipe.PriceEmployees,
+			PriceGuests:     recipe.Recipe.PriceGuests,
 			MensaProviderID: 1,
 		})
 		if err != nil {
@@ -63,11 +63,21 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 			}
 		}
 	} else {
-		fmt.Printf("%+v\n", locales[0].RecipesID)
+
 		if locales[0].RecipesID != nil {
 			recipeID = *locales[0].RecipesID
 		} else {
 			return nil, fmt.Errorf("invalid recipe id")
+		}
+
+		err = repo.UpdateRecipePrices(ctx, repository.UpdateRecipePricesParams{
+			ID:             recipeID,
+			PriceStudents:  recipe.Recipe.PriceStudents,
+			PriceEmployees: recipe.Recipe.PriceEmployees,
+			PriceGuests:    recipe.Recipe.PriceGuests,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("unable to update recipe: %v\n", err)
 		}
 		// Recipe Already Exists
 		// Create Serving if it doesn't exist
@@ -95,7 +105,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 		return nil, err
 	}
 	if rows == 0 {
-		// Check if Serving already exists, if not, panic
+		// Check if Serving already exists, if not, return error
 		serving, err := repo.FindServing(ctx, repository.FindServingParams{
 			RecipeID: recipeID,
 			Date:     date,
@@ -108,5 +118,5 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 		//return nil, fmt.Errorf("no rows inserted: %+v\n", err)
 	}
 
-	return nil, nil
+	return &recipeID, nil
 }

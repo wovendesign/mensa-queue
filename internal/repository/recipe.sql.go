@@ -49,10 +49,10 @@ RETURNING id
 `
 
 type InsertRecipeParams struct {
-	MensaProviderID int32   `json:"mensa_provider_id"`
-	PriceStudents   float64 `json:"price_students"`
-	PriceEmployees  float64 `json:"price_employees"`
-	PriceGuests     float64 `json:"price_guests"`
+	MensaProviderID int32    `json:"mensa_provider_id"`
+	PriceStudents   *float64 `json:"price_students"`
+	PriceEmployees  *float64 `json:"price_employees"`
+	PriceGuests     *float64 `json:"price_guests"`
 }
 
 func (q *Queries) InsertRecipe(ctx context.Context, arg InsertRecipeParams) (int32, error) {
@@ -65,4 +65,43 @@ func (q *Queries) InsertRecipe(ctx context.Context, arg InsertRecipeParams) (int
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const setRecipeAIImage = `-- name: SetRecipeAIImage :exec
+UPDATE recipes
+SET ai_thumbnail_id = $2::int
+WHERE id = $1
+`
+
+type SetRecipeAIImageParams struct {
+	ID            int32 `json:"id"`
+	AiThumbnailID int32 `json:"ai_thumbnail_id"`
+}
+
+func (q *Queries) SetRecipeAIImage(ctx context.Context, arg SetRecipeAIImageParams) error {
+	_, err := q.db.Exec(ctx, setRecipeAIImage, arg.ID, arg.AiThumbnailID)
+	return err
+}
+
+const updateRecipePrices = `-- name: UpdateRecipePrices :exec
+UPDATE recipes
+SET price_students = $2::float8, price_employees = $3::float8, price_guests = $4::float8
+WHERE id = $1
+`
+
+type UpdateRecipePricesParams struct {
+	ID             int32    `json:"id"`
+	PriceStudents  *float64 `json:"price_students"`
+	PriceEmployees *float64 `json:"price_employees"`
+	PriceGuests    *float64 `json:"price_guests"`
+}
+
+func (q *Queries) UpdateRecipePrices(ctx context.Context, arg UpdateRecipePricesParams) error {
+	_, err := q.db.Exec(ctx, updateRecipePrices,
+		arg.ID,
+		arg.PriceStudents,
+		arg.PriceEmployees,
+		arg.PriceGuests,
+	)
+	return err
 }

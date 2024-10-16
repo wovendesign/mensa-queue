@@ -1,18 +1,21 @@
 package images
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
 type RecipeData struct {
-	ID         uint
+	ID         *int32
 	Prompt     string
 	PromptID   string
 	PromptSeed int
@@ -33,15 +36,16 @@ type QueueResponse struct {
 
 type Recipes []*RecipeData
 
-func GenerateImages(images Recipes) {
+func GenerateImages(images Recipes, ctx context.Context) {
 	fillQueue(images)
 	checkEmptyQueue(images)
-	fetchImageName(images)
+	fetchImageName(images, ctx)
 }
 
-func fetchImageName(images Recipes) {
+func fetchImageName(images Recipes, ctx context.Context) {
 	for _, image := range images {
-		url := fmt.Sprintf("https://ai.ericwaetke.de/history/%s", image.PromptID)
+		fmt.Printf("Image: %+v\n", image)
+		url := fmt.Sprintf("%s/history/%s", os.Getenv("COMFYUI_URL"), image.PromptID)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			fmt.Println("failed to create request: %w\n", err)
@@ -58,7 +62,7 @@ func fetchImageName(images Recipes) {
 
 		// Check the HTTP status code
 		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("HTTP request failed with status: %s\n", resp.Status)
+			fmt.Printf("HTTP request (%s) failed with status: %s\n", url, resp.Status)
 			continue
 		}
 
@@ -68,19 +72,40 @@ func fetchImageName(images Recipes) {
 			continue
 		}
 
-		var output HistoryResponse
-		err = json.Unmarshal(body, &output)
+		data := make(map[string]interface{})
+
+		// Unmarshal the JSON into the map
+		err = json.Unmarshal([]byte(body), &data)
 		if err != nil {
-			fmt.Println("failed to unmarshal response body: %w\n", err)
-			continue
+			log.Fatalf("Error unmarshalling JSON: %v", err)
 		}
 
-		for _, imageHistory := range output.Outputs[image.PromptID].Images {
-			if imageHistory.Type == "output" {
-				image.FileName = imageHistory.FileName
-				uploadToPayload(image)
-				break
+		// Access the "outputs" block for the specific UUID
+		if uuidData, ok := data[image.PromptID]; ok {
+			// Type assert to map for the UUID's value
+			if uuidMap, ok := uuidData.(map[string]interface{}); ok {
+				// Navigate to the "outputs" field
+				if outputs, ok := uuidMap["outputs"].(map[string]interface{}); ok {
+					// Now, check the output type "27" for "images"
+					if output27, ok := outputs["27"].(map[string]interface{}); ok {
+						if images, ok := output27["images"].([]interface{}); ok {
+							// Loop over images (in case there are multiple)
+							for _, imageData := range images {
+								if imageInLoop, ok := imageData.(map[string]interface{}); ok {
+									if filename, ok := imageInLoop["filename"].(string); ok {
+										// Print the extracted filename
+										image.FileName = filename
+										uploadToPayload(image, ctx)
+										break
+									}
+								}
+							}
+						}
+					}
+				}
 			}
+		} else {
+			fmt.Printf("UUID %s not found in the data.\n", image.PromptID)
 		}
 	}
 }
@@ -92,7 +117,8 @@ func fillQueue(images Recipes) {
 		requestData := strings.Replace(promptRequest, "{{.Prompt}}", image.Prompt, 1)
 		requestData = strings.Replace(requestData, "{{.Seed}}", strconv.Itoa(image.PromptSeed), 1)
 
-		req, err := http.NewRequest("POST", "https://ai.ericwaetke.de/prompt", strings.NewReader(requestData))
+		url := fmt.Sprintf("%s/prompt", os.Getenv("COMFYUI_URL"))
+		req, err := http.NewRequest("POST", url, strings.NewReader(requestData))
 		if err != nil {
 			fmt.Println("failed to create request: %w\n", err)
 			continue
@@ -108,7 +134,7 @@ func fillQueue(images Recipes) {
 
 		// Check the HTTP status code
 		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("HTTP request failed with status: %s\n", resp.Status)
+			fmt.Printf("HTTP request (%s) failed with status: %s\n", url, resp.Status)
 			continue
 		}
 
@@ -131,13 +157,14 @@ func fillQueue(images Recipes) {
 }
 
 func checkEmptyQueue(images Recipes) {
-	time.Sleep(time.Second*time.Duration(len(images)) + time.Second*20)
+	time.Sleep(time.Second*time.Duration(len(images)) + time.Second*0)
 	var done bool
 
 	for !done {
 		time.Sleep(time.Second)
 
-		req, err := http.NewRequest("GET", "https://ai.ericwaetke.de/prompt", nil)
+		url := fmt.Sprintf("%s/prompt", os.Getenv("COMFYUI_URL"))
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			fmt.Println("failed to make request: %w\n", err)
 			continue
@@ -153,7 +180,7 @@ func checkEmptyQueue(images Recipes) {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("HTTP request failed with status: %s\n", resp.Status)
+			fmt.Printf("HTTP request (%s) failed with status: %s\n", url, resp.Status)
 			continue
 		}
 
@@ -173,11 +200,11 @@ func checkEmptyQueue(images Recipes) {
 			done = true
 		}
 
-		_ = req.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
-func uploadToPayload(image *RecipeData) {
+func uploadToPayload(image *RecipeData, ctx context.Context) {
 	req, err := http.NewRequest("GET", "http://localhost:8188/view?filename="+image.FileName, nil)
 	if err != nil {
 		fmt.Println("failed to make request: %w\n", err)
@@ -202,5 +229,5 @@ func uploadToPayload(image *RecipeData) {
 		return
 	}
 
-	saveRecipeImage(image)
+	saveRecipeImage(image, ctx)
 }

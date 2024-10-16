@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
 	"log"
 	"mensa-queue/internal/images"
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
+	"os"
 	"time"
 )
 
@@ -16,9 +18,12 @@ var recipes images.Recipes
 
 func main() {
 	ctx := context.Background()
+	err := godotenv.Load() // 👈 load .env file
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	//databaseURL := os.Getenv("DATABASE_URL")
-	databaseURL := "postgres://mensauser:postgres@127.0.0.1:5432/mensahhub"
+	databaseURL := os.Getenv("DATABASE_URL")
 
 	for {
 		// Database connection
@@ -31,7 +36,7 @@ func main() {
 		getAllMensas(ctx, conn)
 
 		// TODO: Check if ComfyUI is reachable (only when my PC is on)
-		// go images.GenerateImages(recipes)
+		go images.GenerateImages(recipes, ctx)
 
 		conn.Close(ctx)
 
@@ -40,7 +45,8 @@ func main() {
 }
 
 func getAllMensas(ctx context.Context, conn *pgx.Conn) {
-	mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
+	mensas := []payload.Mensa{payload.NeuesPalais}
+	//mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
 	for _, mensa := range mensas {
 		getMensaData(mensa, ctx, conn)
 	}
@@ -127,17 +133,17 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 				return
 			}
 
-			_, err = payload.InsertRecipe(recipe, t, languages, mensa, ctx, conn)
+			recipeId, err := payload.InsertRecipe(recipe, t, languages, mensa, ctx, conn)
 			if err != nil {
 				fmt.Println("Error inserting recipe:", err)
 				panic(err)
 				continue
 			}
 
-			//recipes = append(recipes, &images.RecipeData{
-			//	ID:     recipeId,
-			//	Prompt: food.Zusatzinformationen.GerichtnameAlternative,
-			//})
+			recipes = append(recipes, &images.RecipeData{
+				ID:     recipeId,
+				Prompt: food.Zusatzinformationen.GerichtnameAlternative,
+			})
 		}
 	}
 }

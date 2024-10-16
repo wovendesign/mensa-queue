@@ -2,12 +2,12 @@ package images
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5"
 	"io"
-	"mensa-queue/internal/payload"
+	"mensa-queue/internal/repository"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -17,7 +17,7 @@ import (
 type PayloadLoginResponse struct {
 	Message string `json:"message"`
 	User    struct {
-		Id        string    `json:"id"`
+		Id        uint      `json:"id"`
 		Email     string    `json:"email"`
 		Verified  bool      `json:"_verified"`
 		CreatedAt time.Time `json:"createdAt"`
@@ -29,10 +29,11 @@ type PayloadLoginResponse struct {
 
 func getPayloadBearer() (string, error) {
 	payloadEmail := os.Getenv("PAYLOAD_EMAIL")
-	payloadPassword := os.Getenv("PAYLOAD_API_KEY")
+	payloadPassword := os.Getenv("PAYLOAD_PASSWORD")
 	jsonBody := []byte(fmt.Sprintf(`{"email": "%s", "password": "%s"}`, payloadEmail, payloadPassword))
 	bodyReader := bytes.NewReader(jsonBody)
-	req, err := http.Post("localhost:3001/api/users/login", "application/json", bodyReader)
+	url := fmt.Sprintf("%s/api/users/login", os.Getenv("PAYLOAD_URL"))
+	req, err := http.Post(url, "application/json", bodyReader)
 	if err != nil {
 		return "", err
 	}
@@ -44,10 +45,12 @@ func getPayloadBearer() (string, error) {
 	}
 
 	var payloadLogin PayloadLoginResponse
-	if err = json.Unmarshal(body, payloadLogin); err != nil {
-		fmt.Println("failed to unmarshal response body: %w\n", err)
+	if err = json.Unmarshal(body, &payloadLogin); err != nil {
+		fmt.Printf("failed to unmarshal response body: %v\n", err)
 		return "", err
 	}
+
+	fmt.Printf("payload login response: %+v\n", payloadLogin)
 
 	return payloadLogin.Token, nil
 }
@@ -71,13 +74,27 @@ type PayloadUploadResponse struct {
 	Message string `json:"message"`
 }
 
-func saveRecipeImage(data *RecipeData) {
+func saveRecipeImage(data *RecipeData, ctx context.Context) {
 	buf := new(bytes.Buffer)
 	bw := multipart.NewWriter(buf) // body writer
 
-	p1w, _ := bw.CreateFormField("file")
-	if _, err := p1w.Write(data.FileData); err != nil {
-		fmt.Println("failed to write form file: %w", err)
+	// Create the file field in the multipart form
+	fileName := fmt.Sprintf("%d_%d.png", time.Now().Unix(), data.ID)
+	fileWriter, err := bw.CreateFormFile("file", fileName) // Ensure "file" is the correct field name
+	if err != nil {
+		fmt.Printf("failed to create form file: %v\n", err)
+		return
+	}
+
+	// Check if file data is empty
+	if len(data.FileData) == 0 {
+		fmt.Println("File data is empty, nothing to upload!")
+		return
+	}
+
+	// Write the file data into the form
+	if _, err := fileWriter.Write(data.FileData); err != nil {
+		fmt.Printf("failed to write file data: %v\n", err)
 		return
 	}
 
@@ -91,18 +108,22 @@ func saveRecipeImage(data *RecipeData) {
 		return
 	}
 
-	req, err := http.NewRequest("POST", "URL", buf)
+	url := fmt.Sprintf("%s/api/media", os.Getenv("PAYLOAD_URL"))
+	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
 		fmt.Println("failed to build request: %w", err)
 		return
 	}
+	//req.Header.Add("Content-Type", "multipart/form-data")
 	req.Header.Add("Content-Type", "multipart/form-data; boundary="+bw.Boundary())
 	bearer, err := getPayloadBearer()
 	if err != nil {
 		fmt.Println("failed to get payload bearer: %w", err)
 		return
 	}
-	req.Header.Add("Authentication", fmt.Sprintf("Bearer %s", bearer))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", bearer))
+
+	fmt.Printf("Auth Header: %+v\n", req.Header)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -123,14 +144,22 @@ func saveRecipeImage(data *RecipeData) {
 		return
 	}
 
-	// TODO: Add Image ID to Recipe
-	dsn := "host=127.0.0.1 user=mensauser password=postgres dbname=mensahhub port=5432 sslmode=disable TimeZone=Europe/Berlin"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
+	fmt.Printf("Payload Upload: %+v\n", payloadUpload)
 
-	db.Model(&payload.Recipe{}).Where("id = ?", data.ID).Update("ai_thumbnail_id", payloadUpload.Doc.ID)
+	// TODO: Add Image ID to Recipe
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Printf("Unable to connect to database: %v\n", err)
+		panic(err)
+	}
+	repo := repository.New(conn)
+	err = repo.SetRecipeAIImage(ctx, repository.SetRecipeAIImageParams{
+		ID:            *data.ID,
+		AiThumbnailID: int32(payloadUpload.Doc.ID),
+	})
+	if err != nil {
+		fmt.Printf("failed to set recipe AI image: %v\n", err)
+	}
 
 	data.FileData = []byte{}
 	_ = resp.Body.Close()
