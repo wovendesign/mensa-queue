@@ -36,6 +36,7 @@ func main() {
 		getAllMensas(ctx, conn)
 
 		// TODO: Check if ComfyUI is reachable (only when my PC is on)
+		// TODO: Check if AI Image already exists before generating one
 		go images.GenerateImages(recipes, ctx)
 
 		conn.Close(ctx)
