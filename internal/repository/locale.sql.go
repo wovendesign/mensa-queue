@@ -42,6 +42,20 @@ func (q *Queries) FindLocale(ctx context.Context, name string) (FindLocaleRow, e
 	return i, err
 }
 
+const findRecipeByLocale = `-- name: FindRecipeByLocale :one
+SELECT locale_rels.recipes_id
+from locale_rels
+WHERE locale_rels.parent_id = $1 AND locale_rels.path = 'recipe'
+LIMIT 1
+`
+
+func (q *Queries) FindRecipeByLocale(ctx context.Context, parentID int32) (*int32, error) {
+	row := q.db.QueryRow(ctx, findRecipeByLocale, parentID)
+	var recipes_id *int32
+	err := row.Scan(&recipes_id)
+	return recipes_id, err
+}
+
 const insertLocale = `-- name: InsertLocale :one
 INSERT INTO locale (name, locale)
 VALUES ($1, $2)
@@ -55,6 +69,32 @@ type InsertLocaleParams struct {
 
 func (q *Queries) InsertLocale(ctx context.Context, arg InsertLocaleParams) (int32, error) {
 	row := q.db.QueryRow(ctx, insertLocale, arg.Name, arg.Locale)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertLocaleIfNotExists = `-- name: InsertLocaleIfNotExists :one
+WITH ins AS (
+    INSERT INTO locale (name, locale)
+        SELECT $1, $2
+        WHERE NOT EXISTS (
+            SELECT 1 FROM locale WHERE name = $1 AND locale = $2
+        )
+        RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM locale WHERE name = $1 AND locale = $2
+`
+
+type InsertLocaleIfNotExistsParams struct {
+	Name   string           `json:"name"`
+	Locale EnumLocaleLocale `json:"locale"`
+}
+
+func (q *Queries) InsertLocaleIfNotExists(ctx context.Context, arg InsertLocaleIfNotExistsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, insertLocaleIfNotExists, arg.Name, arg.Locale)
 	var id int32
 	err := row.Scan(&id)
 	return id, err

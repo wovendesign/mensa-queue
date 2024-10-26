@@ -8,30 +8,57 @@ import (
 	"time"
 )
 
+type LocalNutrient struct {
+	Unit    string
+	Value   float64
+	Locales []*repository.InsertLocaleParams
+}
+
+type LocalRecipe struct {
+	Locales   []repository.InsertLocaleParams
+	Allergen  *[][]Locale
+	Additives *[][]Locale
+	Features  *[][]Locale
+	Nutrients []*LocalNutrient
+	Recipe    Recipe
+}
+
 func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
 	repo := repository.New(conn)
 
+	// Check if the recipe has "names"
 	if len(recipe.Locales) == 0 {
 		return nil, fmt.Errorf("no locale in recipe")
 	}
 
-	locales := make([]repository.FindLocaleRow, 0)
+	// This array will be populated with the IDs in the database of the Locales
+	localeIDs := make([]int32, 0)
 
+	// Loop over all available locales
 	for _, locale := range recipe.Locales {
-		_locale, err := repo.FindLocale(ctx, locale.Name)
+		// Insert the locale if it doesn't exist, return it if it does
+		id, err := repo.InsertLocaleIfNotExists(ctx, repository.InsertLocaleIfNotExistsParams{
+			Name:   locale.Name,
+			Locale: locale.Locale,
+		})
 		if err != nil {
-			fmt.Printf("Unable to find locale: %v\n", err)
-			continue
+			return nil, err
 		}
-		fmt.Printf("Found locale: %+v\n", _locale)
-		locales = append(locales, _locale)
+
+		// Append the ID to the ID Array
+		localeIDs = append(localeIDs, id)
 	}
 
-	var recipeID int32
+	// Check if the locale has a Recipe linked to it
+	// This is e.g. not the case if the Locales were newly created
+	recipeID, err := repo.FindRecipeByLocale(ctx, localeIDs[0])
+	if err != nil {
+		return nil, err
+	}
 
-	if len(locales) == 0 {
-		// Create New Recipe
-		recipeID, err = repo.InsertRecipe(ctx, repository.InsertRecipeParams{
+	if recipeID == nil {
+		// No ID of a linked recipe was found -> create new recipe
+		_recipeID, err := repo.InsertRecipe(ctx, repository.InsertRecipeParams{
 			PriceStudents:   recipe.Recipe.PriceStudents,
 			PriceEmployees:  recipe.Recipe.PriceEmployees,
 			PriceGuests:     recipe.Recipe.PriceGuests,
@@ -40,22 +67,14 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert recipe: %v\n", err)
 		}
+		recipeID = &_recipeID
 
-		// Insert Locales
-		for _, locale := range recipe.Locales {
-
-			id2, err := repo.InsertLocale(ctx, repository.InsertLocaleParams{
-				Name:   locale.Name,
-				Locale: locale.Locale,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
-			}
-
+		// Link the Recipe to the Locales
+		for _, localeID := range localeIDs {
 			err = repo.InsertLocaleRel(ctx, repository.InsertLocaleRelParams{
-				ParentID:  id2,
+				ParentID:  localeID,
 				Path:      "recipe",
-				RecipeID:  &recipeID,
+				RecipeID:  recipeID,
 				FeatureID: nil,
 			})
 			if err != nil {
@@ -63,15 +82,9 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 			}
 		}
 	} else {
-
-		if locales[0].RecipesID != nil {
-			recipeID = *locales[0].RecipesID
-		} else {
-			return nil, fmt.Errorf("invalid recipe id")
-		}
-
+		// The Recipe already existed, updating the prices, in case something changed
 		err = repo.UpdateRecipePrices(ctx, repository.UpdateRecipePricesParams{
-			ID:             recipeID,
+			ID:             *recipeID,
 			PriceStudents:  recipe.Recipe.PriceStudents,
 			PriceEmployees: recipe.Recipe.PriceEmployees,
 			PriceGuests:    recipe.Recipe.PriceGuests,
@@ -79,11 +92,26 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 		if err != nil {
 			return nil, fmt.Errorf("unable to update recipe: %v\n", err)
 		}
-		// Recipe Already Exists
-		// Create Serving if it doesn't exist
-		fmt.Println(recipeID)
 	}
 
+	// Insert Additional Stuff like Nutrients, Allergens, Additives, etc
+	//nutrients := recipe.Nutrients
+	//for _, nutrient := range nutrients {
+	//	nutrient.
+	//}
+
+	// Create a Serving of the Recipe
+	// - A recipe has no dates or mensas attached to it
+	// This creates a new serving, if there wasn't one already
+	_, err = insertServing(mensa, err, repo, ctx, recipeID, date)
+	if err != nil {
+		return nil, err
+	}
+
+	return recipeID, nil
+}
+
+func insertServing(mensa Mensa, err error, repo *repository.Queries, ctx context.Context, recipeID *int32, date time.Time) (*int32, error) {
 	mensaMap := map[Mensa]int32{
 		NeuesPalais:      1,
 		Griebnitzsee:     2,
@@ -95,28 +123,14 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 	}
 	mensaId := mensaMap[mensa]
 
-	rows, err := repo.InsertServing(ctx, repository.InsertServingParams{
-		RecipeID: recipeID,
+	id, err := repo.InsertOrGetServing(ctx, repository.InsertOrGetServingParams{
+		RecipeID: *recipeID,
 		Date:     date,
 		MensaID:  &mensaId,
 	})
 	if err != nil {
-		fmt.Printf("Unable to insert recipe: %v\n", err)
+		fmt.Printf("Unable to insert serving: %v\n", err)
 		return nil, err
 	}
-	if rows == 0 {
-		// Check if Serving already exists, if not, return error
-		serving, err := repo.FindServing(ctx, repository.FindServingParams{
-			RecipeID: recipeID,
-			Date:     date,
-			MensaID:  &mensaId,
-		})
-		if err != nil {
-			fmt.Printf("Unable to find serving: %v\n", err)
-		}
-		fmt.Printf("Found serving: %+v\n", serving)
-		//return nil, fmt.Errorf("no rows inserted: %+v\n", err)
-	}
-
-	return &recipeID, nil
+	return &id, nil
 }

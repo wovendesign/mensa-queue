@@ -30,6 +30,34 @@ func (q *Queries) FindServing(ctx context.Context, arg FindServingParams) (int32
 	return id, err
 }
 
+const insertOrGetServing = `-- name: InsertOrGetServing :one
+WITH ins AS (
+INSERT INTO servings (recipe_id, date, mensa_id)
+SELECT $1, $2::timestamptz, $3
+    WHERE NOT EXISTS (
+        SELECT 1 FROM servings
+        WHERE recipe_id = $1 AND date = $2::timestamptz AND mensa_id = $3
+    )
+    RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM locale WHERE recipe_id = $1 AND date = $2::timestamptz AND mensa_id = $3
+`
+
+type InsertOrGetServingParams struct {
+	RecipeID int32     `json:"recipe_id"`
+	Date     time.Time `json:"date"`
+	MensaID  *int32    `json:"mensa_id"`
+}
+
+func (q *Queries) InsertOrGetServing(ctx context.Context, arg InsertOrGetServingParams) (int32, error) {
+	row := q.db.QueryRow(ctx, insertOrGetServing, arg.RecipeID, arg.Date, arg.MensaID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertServing = `-- name: InsertServing :execrows
 INSERT INTO servings (recipe_id, date, mensa_id)
 SELECT $1, $2::timestamptz, $3

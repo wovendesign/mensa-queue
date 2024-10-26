@@ -2,7 +2,6 @@ package payload
 
 import (
 	"fmt"
-	"mensa-queue/internal/repository"
 	"time"
 
 	"gorm.io/gorm"
@@ -36,20 +35,6 @@ type LocalizedString map[Language]string
 type LocalizedValue[T any] struct {
 	DE T
 	EN T
-}
-
-type LocalNutrient struct {
-	Nutrient Nutrient
-	Name     LocalizedString
-}
-
-type LocalRecipe struct {
-	Locales   []repository.InsertLocaleParams
-	Allergen  *[][]Locale
-	Additives *[][]Locale
-	Features  *[][]Locale
-	Nutrients *[]LocalNutrient
-	Recipe    Recipe
 }
 
 type Recipe struct {

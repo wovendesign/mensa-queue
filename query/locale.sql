@@ -12,6 +12,25 @@ INSERT INTO locale (name, locale)
 VALUES ($1, $2)
 RETURNING id;
 
+-- name: InsertLocaleIfNotExists :one
+WITH ins AS (
+    INSERT INTO locale (name, locale)
+        SELECT $1, $2
+        WHERE NOT EXISTS (
+            SELECT 1 FROM locale WHERE name = $1 AND locale = $2
+        )
+        RETURNING id
+)
+SELECT id FROM ins
+UNION
+SELECT id FROM locale WHERE name = $1 AND locale = $2;
+
 -- name: InsertLocaleRel :exec
 INSERT INTO locale_rels (parent_id, path, recipes_id, features_id)
 VALUES ($1, $2, sqlc.narg(recipe_id), sqlc.narg(feature_id)::int);
+
+-- name: FindRecipeByLocale :one
+SELECT locale_rels.recipes_id
+from locale_rels
+WHERE locale_rels.parent_id = $1 AND locale_rels.path = 'recipe'
+LIMIT 1;

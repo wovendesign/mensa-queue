@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"mensa-queue/internal/payload"
-
+	"mensa-queue/internal/repository"
 	"net/http"
 	"strconv"
 	"strings"
@@ -304,129 +304,115 @@ func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
 	return &mealCategoryResponse.Content, nil
 }
 
-func ExtractNutrients(food SpeiseplanGerichtDatum) (*[]payload.LocalNutrient, error) {
-	nutrients := make([]payload.LocalNutrient, 0)
+func ExtractNutrients(food SpeiseplanGerichtDatum) ([]*payload.LocalNutrient, error) {
+	nutrients := make([]*payload.LocalNutrient, 0)
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "kcal",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "kcal",
+		Value: float64(food.Zusatzinformationen.NwkcalInteger),
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Kalorien",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwkcalInteger),
+			{
+				Name:   "Calories",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Kalorien",
-			payload.EN: "Calories",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NwfettDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Fett",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwfettDecimal1),
+			{
+				Name:   "Fat",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Fett",
-			payload.EN: "Fat",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NwfettsaeurenDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Gesättigte Fettsäuren",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwfettsaeurenDecimal1),
+			{
+				Name:   "Saturated Fatty Acids",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Gesättigte Fettsäuren",
-			payload.EN: "Saturated Fatty Acids",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NwkohlehydrateDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Kohlenhydrate",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwkohlehydrateDecimal1),
+			{
+				Name:   "Carbohydrates",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Kohlenhydrate",
-			payload.EN: "Carbohydrates",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NwzuckerDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Zucker",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwzuckerDecimal1),
+			{
+				Name:   "Sugar",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Zucker",
-			payload.EN: "Sugar",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NweiweissDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Eiweiß",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NweiweissDecimal1),
+			{
+				Name:   "Protein",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Eiweiß",
-			payload.EN: "Protein",
 		},
 	})
 
-	nutrients = append(nutrients, payload.LocalNutrient{
-		Nutrient: payload.Nutrient{
-			NutrientLabel: payload.NutrientLabel{
-				Unit: payload.NutrientUnit{
-					Name: "g",
-				},
+	nutrients = append(nutrients, &payload.LocalNutrient{
+		Unit:  "g",
+		Value: food.Zusatzinformationen.NwsalzDecimal1,
+		Locales: []*repository.InsertLocaleParams{
+			{
+				Name:   "Salz",
+				Locale: repository.EnumLocaleLocaleDe,
 			},
-			NutrientValue: payload.NutrientValue{
-				Value: float64(food.Zusatzinformationen.NwsalzDecimal1),
+			{
+				Name:   "Salt",
+				Locale: repository.EnumLocaleLocaleEn,
 			},
-		},
-		Name: payload.LocalizedString{
-			payload.DE: "Salz",
-			payload.EN: "Salt",
 		},
 	})
 
-	return &nutrients, nil
+	return nutrients, nil
 }
 
 type AdditiveResponse struct {
