@@ -15,15 +15,15 @@ RETURNING id;
 -- name: InsertLocaleIfNotExists :one
 WITH ins AS (
     INSERT INTO locale (name, locale)
-        SELECT $1, $2
+        SELECT sqlc.arg(name)::varchar, sqlc.arg(locale)
         WHERE NOT EXISTS (
-            SELECT 1 FROM locale WHERE name = $1 AND locale = $2
+            SELECT 1 FROM locale WHERE name = sqlc.arg(name)::varchar AND locale = sqlc.arg(locale)
         )
         RETURNING id
 )
 SELECT id FROM ins
 UNION
-SELECT id FROM locale WHERE name = $1 AND locale = $2;
+SELECT id FROM locale WHERE name = sqlc.arg(name)::varchar AND locale = sqlc.arg(locale);
 
 -- name: InsertLocaleRel :exec
 INSERT INTO locale_rels (parent_id, path, recipes_id, features_id)

@@ -42,6 +42,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 			Locale: locale.Locale,
 		})
 		if err != nil {
+			fmt.Printf("error inserting locale: %v\n", err)
 			return nil, err
 		}
 
@@ -51,10 +52,14 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mens
 
 	// Check if the locale has a Recipe linked to it
 	// This is e.g. not the case if the Locales were newly created
-	recipeID, err := repo.FindRecipeByLocale(ctx, localeIDs[0])
-	if err != nil {
-		return nil, err
-	}
+	recipeID, _ := repo.FindRecipeByLocale(ctx, localeIDs[0])
+	//if err != nil {
+	//	fmt.Printf("error finding recipe: %v\n", err)
+	//	//err = nil
+	//	return nil, err
+	//}
+
+	fmt.Printf("recipeID: %v\n", recipeID)
 
 	if recipeID == nil {
 		// No ID of a linked recipe was found -> create new recipe

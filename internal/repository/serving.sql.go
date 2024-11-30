@@ -42,7 +42,7 @@ SELECT $1, $2::timestamptz, $3
 )
 SELECT id FROM ins
 UNION
-SELECT id FROM locale WHERE recipe_id = $1 AND date = $2::timestamptz AND mensa_id = $3
+SELECT id FROM servings WHERE recipe_id = $1 AND date = $2::timestamptz AND mensa_id = $3
 `
 
 type InsertOrGetServingParams struct {

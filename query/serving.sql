@@ -25,4 +25,4 @@ SELECT $1, @date::timestamptz, @mensa_id
 )
 SELECT id FROM ins
 UNION
-SELECT id FROM locale WHERE recipe_id = $1 AND date = @date::timestamptz AND mensa_id = @mensa_id;
+SELECT id FROM servings WHERE recipe_id = $1 AND date = @date::timestamptz AND mensa_id = @mensa_id;

@@ -77,15 +77,15 @@ func (q *Queries) InsertLocale(ctx context.Context, arg InsertLocaleParams) (int
 const insertLocaleIfNotExists = `-- name: InsertLocaleIfNotExists :one
 WITH ins AS (
     INSERT INTO locale (name, locale)
-        SELECT $1, $2
+        SELECT $1::varchar, $2
         WHERE NOT EXISTS (
-            SELECT 1 FROM locale WHERE name = $1 AND locale = $2
+            SELECT 1 FROM locale WHERE name = $1::varchar AND locale = $2
         )
         RETURNING id
 )
 SELECT id FROM ins
 UNION
-SELECT id FROM locale WHERE name = $1 AND locale = $2
+SELECT id FROM locale WHERE name = $1::varchar AND locale = $2
 `
 
 type InsertLocaleIfNotExistsParams struct {
