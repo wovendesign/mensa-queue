@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
@@ -16,13 +15,13 @@ import (
 
 var recipes images.Recipes
 
-func loadConfig() (*pgxpool.Config, error) {
+func loadConfig() (*pgx.ConnConfig, error) {
 	cfg, err := config.NewDatabase()
 	if err != nil {
 		return nil, err
 	}
 
-	return pgxpool.ParseConfig(fmt.Sprintf(
+	return pgx.ParseConfig(fmt.Sprintf(
 		"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode,
 	))
@@ -44,7 +43,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		conn, err := pgxpool.NewWithConfig(ctx, pgConfig)
+		conn, err := pgx.ConnectConfig(ctx, pgConfig)
 		if err != nil {
 			fmt.Printf("Unable to connect to database: %v\n", err)
 			panic(err)
