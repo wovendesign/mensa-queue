@@ -46,8 +46,8 @@ func main() {
 }
 
 func getAllMensas(ctx context.Context, conn *pgx.Conn) {
-	mensas := []payload.Mensa{payload.NeuesPalais}
-	//mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
+	//mensas := []payload.Mensa{payload.NeuesPalais}
+	mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
 	for _, mensa := range mensas {
 		getMensaData(mensa, ctx, conn)
 	}
@@ -129,6 +129,8 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 			}
 
 			t, err := time.Parse(time.RFC3339, food.SpeiseplanAdvancedGericht.Date)
+			t = t.UTC()
+			fmt.Printf("time: %v\n", t)
 			if err != nil {
 				fmt.Println("Error parsing time:", err)
 				return

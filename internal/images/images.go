@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -112,7 +111,8 @@ func fetchImageName(images Recipes, ctx context.Context) {
 
 func fillQueue(images Recipes) {
 	for _, image := range images {
-		image.PromptSeed = rand.Int()
+		image.PromptSeed = 1234
+		//image.PromptSeed = rand.Int()
 
 		requestData := strings.Replace(promptRequest, "{{.Prompt}}", image.Prompt, 1)
 		requestData = strings.Replace(requestData, "{{.Seed}}", strconv.Itoa(image.PromptSeed), 1)
