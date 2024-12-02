@@ -4,30 +4,47 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/joho/godotenv"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
+	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
-	"os"
 	"time"
 )
 
 var recipes images.Recipes
 
-func main() {
-	ctx := context.Background()
-	err := godotenv.Load() // 👈 load .env file
+func loadConfig() (*pgxpool.Config, error) {
+	cfg, err := config.NewDatabase()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	databaseURL := os.Getenv("DATABASE_URL")
+	return pgxpool.ParseConfig(fmt.Sprintf(
+		"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
+		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode,
+	))
+}
+
+func main() {
+	ctx := context.Background()
+	//err := godotenv.Load() // 👈 load .env file
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//databaseURL := os.Getenv("DATABASE_URL")
 
 	for {
 		// Database connection
-		conn, err := pgx.Connect(ctx, databaseURL)
+		//conn, err := pgx.Connect(ctx, databaseURL)
+		pgConfig, err := loadConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+		conn, err := pgxpool.NewWithConfig(ctx, pgConfig)
 		if err != nil {
 			fmt.Printf("Unable to connect to database: %v\n", err)
 			panic(err)
