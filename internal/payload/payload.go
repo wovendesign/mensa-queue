@@ -70,7 +70,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 				FeatureID: nil,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+				return nil, fmt.Errorf("unable to insert locale<->recipe rel: %v\n", err)
 			}
 		}
 	} else {
@@ -95,27 +95,28 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 		}
 
 		// Check if Features exist already
+		var featureID int32
 		locale, _ := repo.FindLocale(ctx, feature[0].Name)
-		if locale.FeaturesID != nil {
-			continue
-		}
-
-		featureID, err := repo.InsertFeature(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to insert feature: %v\n", err)
-		}
-
-		//	Insert Locale Rels
-		for _, localeID := range localeIDs {
-			err = repo.InsertLocaleRel(ctx, repository.InsertLocaleRelParams{
-				ParentID:  localeID,
-				Path:      "feature",
-				RecipeID:  nil,
-				FeatureID: &featureID,
-			})
+		if locale.FeaturesID == nil {
+			_featureID, err := repo.InsertFeature(ctx)
 			if err != nil {
-				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+				return nil, fmt.Errorf("unable to insert feature: %v\n", err)
 			}
+			featureID = _featureID
+			//	Insert Locale Rels
+			for _, localeID := range localeIDs {
+				err = repo.InsertLocaleRel(ctx, repository.InsertLocaleRelParams{
+					ParentID:  localeID,
+					Path:      "feature",
+					RecipeID:  nil,
+					FeatureID: &featureID,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("unable to insert locale<->feature rel on feature: %v: %v\n", featureID, err)
+				}
+			}
+		} else {
+			featureID = *locale.FeaturesID
 		}
 
 		//	Add Feature to Recipe

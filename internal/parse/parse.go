@@ -24,7 +24,16 @@ const (
 func sendRequestToSWT(model Model, mensa payload.Mensa, languageType repository.EnumLocaleLocale) ([]byte, error) {
 	client := &http.Client{}
 	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
-	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
+
+	var languageInt int
+	switch languageType {
+	case repository.EnumLocaleLocaleDe:
+		languageInt = 1
+	case repository.EnumLocaleLocaleEn:
+		languageInt = 2
+	}
+
+	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageInt)
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

@@ -11,7 +11,10 @@ import (
 
 const addFeatureToRecipe = `-- name: AddFeatureToRecipe :exec
 INSERT INTO recipes_rels (parent_id, features_id, path)
-VALUES ($1, $2, 'feature')
+SELECT $1, $2, 'feature'
+WHERE NOT EXISTS (
+    SELECT 1 FROM recipes_rels WHERE parent_id = $1 AND features_id = $2
+)
 `
 
 type AddFeatureToRecipeParams struct {
