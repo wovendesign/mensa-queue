@@ -16,10 +16,10 @@ type LocalNutrient struct {
 }
 
 type LocalRecipe struct {
-	Locales   []repository.InsertLocaleParams
-	Allergen  *[][]repository.InsertLocaleParams
-	Additives *[][]repository.InsertLocaleParams
-	Features  *[][]repository.InsertLocaleParams
+	Locales   []*repository.InsertLocaleParams
+	Allergen  [][]*repository.InsertLocaleParams
+	Additives [][]*repository.InsertLocaleParams
+	Features  [][]*repository.InsertLocaleParams
 	Nutrients []*LocalNutrient
 	Recipe    Recipe
 }
@@ -32,23 +32,9 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 		return nil, fmt.Errorf("no locale in recipe")
 	}
 
-	// This array will be populated with the IDs in the database of the Locales
-	localeIDs := make([]int32, 0)
-
-	// Loop over all available locales
-	for _, locale := range recipe.Locales {
-		// Insert the locale if it doesn't exist, return it if it does
-		id, err := repo.InsertLocaleIfNotExists(ctx, repository.InsertLocaleIfNotExistsParams{
-			Name:   locale.Name,
-			Locale: locale.Locale,
-		})
-		if err != nil {
-			fmt.Printf("error inserting locale: %v\n", err)
-			return nil, err
-		}
-
-		// Append the ID to the ID Array
-		localeIDs = append(localeIDs, id)
+	localeIDs, err := insertLocales(recipe.Locales, repo, ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if the locale has a Recipe linked to it
@@ -101,10 +87,46 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 	}
 
 	// Insert Additional Stuff like Nutrients, Allergens, Additives, etc
-	//nutrients := recipe.Nutrients
-	//for _, nutrient := range nutrients {
-	//	nutrient.
-	//}
+	features := recipe.Features
+	for _, feature := range features {
+		localeIDs, err := insertLocales(feature, repo, ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+		}
+
+		// Check if Features exist already
+		locale, _ := repo.FindLocale(ctx, feature[0].Name)
+		if locale.FeaturesID != nil {
+			continue
+		}
+
+		featureID, err := repo.InsertFeature(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to insert feature: %v\n", err)
+		}
+
+		//	Insert Locale Rels
+		for _, localeID := range localeIDs {
+			err = repo.InsertLocaleRel(ctx, repository.InsertLocaleRelParams{
+				ParentID:  localeID,
+				Path:      "feature",
+				RecipeID:  nil,
+				FeatureID: &featureID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("unable to insert locale: %v\n", err)
+			}
+		}
+
+		//	Add Feature to Recipe
+		err = repo.AddFeatureToRecipe(ctx, repository.AddFeatureToRecipeParams{
+			ParentID:   *recipeID,
+			FeaturesID: &featureID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("unable to insert feature<->recipe rel: %v\n", err)
+		}
+	}
 
 	// Create a Serving of the Recipe
 	// - A recipe has no dates or mensas attached to it
@@ -115,6 +137,28 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 	}
 
 	return recipeID, nil
+}
+
+func insertLocales(locales []*repository.InsertLocaleParams, repo *repository.Queries, ctx context.Context) ([]int32, error) {
+	// This array will be populated with the IDs in the database of the Locales
+	localeIDs := make([]int32, 0)
+
+	// Loop over all available locales
+	for _, locale := range locales {
+		// Insert the locale if it doesn't exist, return it if it does
+		id, err := repo.InsertLocaleIfNotExists(ctx, repository.InsertLocaleIfNotExistsParams{
+			Name:   locale.Name,
+			Locale: locale.Locale,
+		})
+		if err != nil {
+			fmt.Printf("error inserting locale: %v\n", err)
+			return nil, err
+		}
+
+		// Append the ID to the ID Array
+		localeIDs = append(localeIDs, id)
+	}
+	return localeIDs, nil
 }
 
 func insertServing(mensa Mensa, err error, repo *repository.Queries, ctx context.Context, recipeID *int32, date time.Time) (*int32, error) {

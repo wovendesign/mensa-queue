@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
@@ -30,6 +31,11 @@ func loadConfig() (*pgx.ConnConfig, error) {
 
 func main() {
 	ctx := context.Background()
+
+	err := godotenv.Load() // 👈 load .env file
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	for {
 		// Database connection
@@ -117,7 +123,7 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 			}
 
 			recipe := &payload.LocalRecipe{
-				Locales: []repository.InsertLocaleParams{
+				Locales: []*repository.InsertLocaleParams{
 					{
 						Name:   food.SpeiseplanAdvancedGericht.RecipeName,
 						Locale: repository.EnumLocaleLocaleDe,
