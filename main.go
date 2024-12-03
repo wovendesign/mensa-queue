@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"log"
 	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
@@ -11,6 +10,8 @@ import (
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 var recipes images.Recipes
@@ -29,16 +30,9 @@ func loadConfig() (*pgx.ConnConfig, error) {
 
 func main() {
 	ctx := context.Background()
-	//err := godotenv.Load() // 👈 load .env file
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//databaseURL := os.Getenv("DATABASE_URL")
 
 	for {
 		// Database connection
-		//conn, err := pgx.Connect(ctx, databaseURL)
 		pgConfig, err := loadConfig()
 		if err != nil {
 			log.Fatal(err)
@@ -53,7 +47,7 @@ func main() {
 
 		// TODO: Check if ComfyUI is reachable (only when my PC is on)
 		// TODO: Check if AI Image already exists before generating one
-		go images.GenerateImages(recipes, ctx)
+		// go images.GenerateImages(recipes, ctx)
 
 		conn.Close(ctx)
 
@@ -70,7 +64,7 @@ func getAllMensas(ctx context.Context, conn *pgx.Conn) {
 }
 
 func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
-	languages := []payload.Language{payload.EN, payload.DE}
+	languages := []repository.EnumLocaleLocale{repository.EnumLocaleLocaleDe, repository.EnumLocaleLocaleEn}
 	foodContent, err := parsers.ParsePotsdamMensaData(mensa)
 	if err != nil {
 		log.Fatal(err)
@@ -152,7 +146,7 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 				return
 			}
 
-			recipeId, err := payload.InsertRecipe(recipe, t, languages, mensa, ctx, conn)
+			recipeId, err := payload.InsertRecipe(recipe, t, mensa, ctx, conn)
 			if err != nil {
 				fmt.Println("Error inserting recipe:", err)
 				panic(err)

@@ -2,6 +2,7 @@ package payload
 
 import (
 	"fmt"
+	"mensa-queue/internal/repository"
 	"time"
 
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ func (l Language) String() string {
 	return [...]string{"", "de", "en"}[l]
 }
 
-type LocalizedString map[Language]string
+type LocalizedString map[repository.EnumLocaleLocale]string
 
 type LocalizedValue[T any] struct {
 	DE T

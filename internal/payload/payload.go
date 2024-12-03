@@ -3,9 +3,10 @@ package payload
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"mensa-queue/internal/repository"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type LocalNutrient struct {
@@ -16,14 +17,14 @@ type LocalNutrient struct {
 
 type LocalRecipe struct {
 	Locales   []repository.InsertLocaleParams
-	Allergen  *[][]Locale
-	Additives *[][]Locale
-	Features  *[][]Locale
+	Allergen  *[][]repository.InsertLocaleParams
+	Additives *[][]repository.InsertLocaleParams
+	Features  *[][]repository.InsertLocaleParams
 	Nutrients []*LocalNutrient
 	Recipe    Recipe
 }
 
-func InsertRecipe(recipe *LocalRecipe, date time.Time, language []Language, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
+func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
 	repo := repository.New(conn)
 
 	// Check if the recipe has "names"

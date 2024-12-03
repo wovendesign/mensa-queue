@@ -21,7 +21,7 @@ const (
 	CategoryModel  Model = "mealCategory"
 )
 
-func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Language) ([]byte, error) {
+func sendRequestToSWT(model Model, mensa payload.Mensa, languageType repository.EnumLocaleLocale) ([]byte, error) {
 	client := &http.Client{}
 	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
 	reqURL := fmt.Sprintf("%s&model=%s&location=%d&languagetype=%d", url, model, mensa, languageType)
@@ -50,7 +50,7 @@ func sendRequestToSWT(model Model, mensa payload.Mensa, languageType payload.Lan
 	return body, nil
 }
 
-func ParseModel[T any](model Model, mensa payload.Mensa, languageType payload.Language) (*SWTResponse[T], error) {
+func ParseModel[T any](model Model, mensa payload.Mensa, languageType repository.EnumLocaleLocale) (*SWTResponse[T], error) {
 	body, err := sendRequestToSWT(model, mensa, languageType)
 	if err != nil {
 		return nil, err
@@ -258,7 +258,7 @@ type FeatureList struct {
 }
 
 func ParsePotsdamMensaData(mensa payload.Mensa) (*[]FoodContent, error) {
-	body, err := sendRequestToSWT(FoodModel, mensa, payload.DE)
+	body, err := sendRequestToSWT(FoodModel, mensa, repository.EnumLocaleLocaleDe)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ type MealCategory struct {
 }
 
 func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
-	body, err := sendRequestToSWT(CategoryModel, mensa, payload.DE)
+	body, err := sendRequestToSWT(CategoryModel, mensa, repository.EnumLocaleLocaleDe)
 
 	var mealCategoryResponse MealCategoryResponse
 
@@ -420,7 +420,7 @@ type AdditiveResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAdditives(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
+func ParseAdditives(languages []repository.EnumLocaleLocale, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allAdditives := make(map[int64]payload.LocalizedString)
 	for _, language := range languages {
 		additives, err := ParseModel[AdditiveResponse](AdditivesModel, mensa, language)
@@ -446,13 +446,13 @@ func ParseAdditives(languages []payload.Language, mensa payload.Mensa) (map[int6
 	return allAdditives, nil
 }
 
-func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
+func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.LocalizedString, languages []repository.EnumLocaleLocale) (*[][]repository.InsertLocaleParams, error) {
 	if food.AdditivesIDsString == nil || len(*food.AdditivesIDsString) == 0 {
 		return nil, nil
 	}
 	additivesArray := strings.Split(*food.AdditivesIDsString, ",")
 
-	var result [][]payload.Locale
+	var result [][]repository.InsertLocaleParams
 
 	for _, additiveID := range additivesArray {
 		additiveIDInt, err := strconv.Atoi(additiveID)
@@ -460,11 +460,11 @@ func ExtractAdditives(food SpeiseplanGerichtDatum, additives map[int64]payload.L
 			return nil, fmt.Errorf("error parsing additive ID: %w", err)
 		}
 
-		var additivePair []payload.Locale
+		var additivePair []repository.InsertLocaleParams
 		for _, language := range languages {
-			additivePair = append(additivePair, payload.Locale{
+			additivePair = append(additivePair, repository.InsertLocaleParams{
 				Name:   additives[int64(additiveIDInt)][language],
-				Locale: language.String(),
+				Locale: language,
 			})
 		}
 
@@ -479,7 +479,7 @@ type AllergenResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseAllergens(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
+func ParseAllergens(languages []repository.EnumLocaleLocale, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allAllergens := make(map[int64]payload.LocalizedString)
 
 	for _, language := range languages {
@@ -507,13 +507,13 @@ func ParseAllergens(languages []payload.Language, mensa payload.Mensa) (map[int6
 	return allAllergens, nil
 }
 
-func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
+func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.LocalizedString, languages []repository.EnumLocaleLocale) (*[][]repository.InsertLocaleParams, error) {
 	if food.AllergenIDsString == "" {
 		return nil, nil
 	}
 
 	allergenIDs := strings.Split(food.AllergenIDsString, ",")
-	var result [][]payload.Locale
+	var result [][]repository.InsertLocaleParams
 
 	for _, allergenID := range allergenIDs {
 		allergenIDInt, err := strconv.Atoi(allergenID)
@@ -521,11 +521,11 @@ func ExtractAllergens(food SpeiseplanGerichtDatum, allergens map[int64]payload.L
 			return nil, fmt.Errorf("error parsing allergen ID: %w", err)
 		}
 
-		var allergenPair []payload.Locale
+		var allergenPair []repository.InsertLocaleParams
 		for _, language := range languages {
-			allergenPair = append(allergenPair, payload.Locale{
+			allergenPair = append(allergenPair, repository.InsertLocaleParams{
 				Name:   allergens[int64(allergenIDInt)][language],
-				Locale: language.String(),
+				Locale: language,
 			})
 		}
 
@@ -540,7 +540,7 @@ type FeatureResponse struct {
 	Name string `json:"name"`
 }
 
-func ParseFeatures(languages []payload.Language, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
+func ParseFeatures(languages []repository.EnumLocaleLocale, mensa payload.Mensa) (map[int64]payload.LocalizedString, error) {
 	allFeatures := make(map[int64]payload.LocalizedString)
 	for _, language := range languages {
 		features, err := ParseModel[FeatureResponse](FeaturesModel, mensa, language)
@@ -566,13 +566,13 @@ func ParseFeatures(languages []payload.Language, mensa payload.Mensa) (map[int64
 	return allFeatures, nil
 }
 
-func ExtractFeatures(food SpeiseplanGerichtDatum, features map[int64]payload.LocalizedString, languages []payload.Language) (*[][]payload.Locale, error) {
+func ExtractFeatures(food SpeiseplanGerichtDatum, features map[int64]payload.LocalizedString, languages []repository.EnumLocaleLocale) (*[][]repository.InsertLocaleParams, error) {
 	if food.FeaturesIDsString == "" {
 		return nil, nil
 	}
 
 	featureIDs := strings.Split(food.FeaturesIDsString, ",")
-	var result [][]payload.Locale
+	var result [][]repository.InsertLocaleParams
 
 	for _, featureID := range featureIDs {
 		featureIDInt, err := strconv.Atoi(featureID)
@@ -580,11 +580,11 @@ func ExtractFeatures(food SpeiseplanGerichtDatum, features map[int64]payload.Loc
 			return nil, fmt.Errorf("error parsing allergen ID: %w", err)
 		}
 
-		var featurePair []payload.Locale
+		var featurePair []repository.InsertLocaleParams
 		for _, language := range languages {
-			featurePair = append(featurePair, payload.Locale{
+			featurePair = append(featurePair, repository.InsertLocaleParams{
 				Name:   features[int64(featureIDInt)][language],
-				Locale: language.String(),
+				Locale: language,
 			})
 		}
 
