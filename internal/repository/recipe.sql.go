@@ -10,7 +10,7 @@ import (
 )
 
 const findAllRecipes = `-- name: FindAllRecipes :many
-SELECT id, ai_thumbnail_id, price_students, price_employees, price_guests, mensa_provider_id, updated_at, created_at FROM recipes
+SELECT id, ai_thumbnail_id, price_students, price_employees, price_guests, mensa_provider_id, updated_at, created_at, category FROM recipes
 `
 
 func (q *Queries) FindAllRecipes(ctx context.Context) ([]Recipe, error) {
@@ -31,6 +31,7 @@ func (q *Queries) FindAllRecipes(ctx context.Context) ([]Recipe, error) {
 			&i.MensaProviderID,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.Category,
 		); err != nil {
 			return nil, err
 		}
@@ -43,21 +44,23 @@ func (q *Queries) FindAllRecipes(ctx context.Context) ([]Recipe, error) {
 }
 
 const insertRecipe = `-- name: InsertRecipe :one
-INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id)
-VALUES ($2::float8, $3::float8, $4::float8, $1)
+INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id, category)
+VALUES ($3::float8, $4::float8, $5::float8, $1, $2)
 RETURNING id
 `
 
 type InsertRecipeParams struct {
-	MensaProviderID int32    `json:"mensa_provider_id"`
-	PriceStudents   *float64 `json:"price_students"`
-	PriceEmployees  *float64 `json:"price_employees"`
-	PriceGuests     *float64 `json:"price_guests"`
+	MensaProviderID int32                   `json:"mensa_provider_id"`
+	Category        NullEnumRecipesCategory `json:"category"`
+	PriceStudents   *float64                `json:"price_students"`
+	PriceEmployees  *float64                `json:"price_employees"`
+	PriceGuests     *float64                `json:"price_guests"`
 }
 
 func (q *Queries) InsertRecipe(ctx context.Context, arg InsertRecipeParams) (int32, error) {
 	row := q.db.QueryRow(ctx, insertRecipe,
 		arg.MensaProviderID,
+		arg.Category,
 		arg.PriceStudents,
 		arg.PriceEmployees,
 		arg.PriceGuests,

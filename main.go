@@ -10,6 +10,7 @@ import (
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -94,9 +95,23 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 		return
 	}
 
+	categoryMap, err := parsers.ParseMealCategory(mensa)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	for _, week := range *foodContent {
 		for _, food := range week.SpeiseplanGerichtData {
-			// fmt.Printf("%+v\n", food)
+			if food.Zusatzinformationen.MitarbeiterpreisDecimal2 == 0 || strings.Contains(food.SpeiseplanAdvancedGericht.RecipeName, "Preis pro") {
+				continue
+			}
+
+			category, err := parsers.ExtractCategories(food, categoryMap)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 
 			nutrients, err := parsers.ExtractNutrients(food)
 			if err != nil {
@@ -142,20 +157,21 @@ func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
 				Allergen:  allergens,
 				Additives: additives,
 				Features:  features,
+				Category:  category,
 			}
 
 			t, err := time.Parse(time.RFC3339, food.SpeiseplanAdvancedGericht.Date)
 			t = t.UTC()
-			fmt.Printf("time: %v\n", t)
 			if err != nil {
 				fmt.Println("Error parsing time:", err)
 				return
 			}
 
+			fmt.Printf("Recipe: %v\n", recipe)
+
 			recipeId, err := payload.InsertRecipe(recipe, t, mensa, ctx, conn)
 			if err != nil {
 				fmt.Println("Error inserting recipe:", err)
-				panic(err)
 				continue
 			}
 

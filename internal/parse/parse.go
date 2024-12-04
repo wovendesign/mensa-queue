@@ -295,7 +295,7 @@ type MealCategory struct {
 	LanguageType int64  `json:"languageTypeID"`
 }
 
-func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
+func ParseMealCategory(mensa payload.Mensa) (map[int64]MealCategory, error) {
 	body, err := sendRequestToSWT(CategoryModel, mensa, repository.EnumLocaleLocaleDe)
 
 	var mealCategoryResponse MealCategoryResponse
@@ -309,8 +309,25 @@ func ParseMealCategory(mensa payload.Mensa) (*[]MealCategory, error) {
 	if !mealCategoryResponse.Success {
 		return nil, fmt.Errorf("API error: success is false, content: %v", mealCategoryResponse.Content)
 	}
+	content := mealCategoryResponse.Content
 
-	return &mealCategoryResponse.Content, nil
+	categories := make(map[int64]MealCategory, len(content))
+
+	for _, category := range content {
+		categories[category.ID] = category
+	}
+
+	return categories, nil
+}
+
+func ExtractCategories(food SpeiseplanGerichtDatum, categoryMap map[int64]MealCategory) (repository.EnumRecipesCategory, error) {
+	category := categoryMap[food.SpeiseplanAdvancedGericht.RecipeCategoryID]
+
+	if strings.Contains(category.Name, "Dessert") {
+		return repository.EnumRecipesCategoryDessert, nil
+	}
+
+	return repository.EnumRecipesCategoryMain, nil
 }
 
 func ExtractNutrients(food SpeiseplanGerichtDatum) ([]*payload.LocalNutrient, error) {

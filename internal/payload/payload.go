@@ -22,6 +22,7 @@ type LocalRecipe struct {
 	Features  [][]*repository.InsertLocaleParams
 	Nutrients []*LocalNutrient
 	Recipe    Recipe
+	Category  repository.EnumRecipesCategory
 }
 
 func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
@@ -55,6 +56,10 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 			PriceEmployees:  recipe.Recipe.PriceEmployees,
 			PriceGuests:     recipe.Recipe.PriceGuests,
 			MensaProviderID: 1,
+			Category: repository.NullEnumRecipesCategory{
+				EnumRecipesCategory: recipe.Category,
+				Valid:               true,
+			},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert recipe: %v\n", err)

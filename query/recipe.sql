@@ -2,8 +2,8 @@
 SELECT * FROM recipes;
 
 -- name: InsertRecipe :one
-INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id)
-VALUES (sqlc.narg(price_students)::float8, sqlc.narg(price_employees)::float8, sqlc.narg(price_guests)::float8, $1)
+INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id, category)
+VALUES (sqlc.narg(price_students)::float8, sqlc.narg(price_employees)::float8, sqlc.narg(price_guests)::float8, $1, $2)
 RETURNING id;
 
 -- name: UpdateRecipePrices :exec

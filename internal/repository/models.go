@@ -53,6 +53,50 @@ func (ns NullEnumLocaleLocale) Value() (driver.Value, error) {
 	return string(ns.EnumLocaleLocale), nil
 }
 
+type EnumRecipesCategory string
+
+const (
+	EnumRecipesCategoryStarter EnumRecipesCategory = "starter"
+	EnumRecipesCategoryMain    EnumRecipesCategory = "main"
+	EnumRecipesCategorySide    EnumRecipesCategory = "side"
+	EnumRecipesCategoryDessert EnumRecipesCategory = "dessert"
+)
+
+func (e *EnumRecipesCategory) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EnumRecipesCategory(s)
+	case string:
+		*e = EnumRecipesCategory(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EnumRecipesCategory: %T", src)
+	}
+	return nil
+}
+
+type NullEnumRecipesCategory struct {
+	EnumRecipesCategory EnumRecipesCategory `json:"enum_recipes_category"`
+	Valid               bool                `json:"valid"` // Valid is true if EnumRecipesCategory is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEnumRecipesCategory) Scan(value interface{}) error {
+	if value == nil {
+		ns.EnumRecipesCategory, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EnumRecipesCategory.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEnumRecipesCategory) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EnumRecipesCategory), nil
+}
+
 type EnumServingTimeDay string
 
 const (
@@ -169,17 +213,10 @@ type AllergensLocale struct {
 }
 
 type Feature struct {
-	ID              int32              `json:"id"`
-	MensaProviderID *int32             `json:"mensa_provider_id"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-}
-
-type FeaturesLocale struct {
-	Name     *string `json:"name"`
-	ID       int32   `json:"id"`
-	Locale   Locales `json:"_locale"`
-	ParentID int32   `json:"_parent_id"`
+	ID           int32              `json:"id"`
+	VisibleSmall *bool              `json:"visible_small"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type Info struct {
@@ -198,12 +235,14 @@ type Locale struct {
 }
 
 type LocaleRel struct {
-	ID         int32  `json:"id"`
-	Order      *int32 `json:"order"`
-	ParentID   int32  `json:"parent_id"`
-	Path       string `json:"path"`
-	RecipesID  *int32 `json:"recipes_id"`
-	FeaturesID *int32 `json:"features_id"`
+	ID          int32  `json:"id"`
+	Order       *int32 `json:"order"`
+	ParentID    int32  `json:"parent_id"`
+	Path        string `json:"path"`
+	RecipesID   *int32 `json:"recipes_id"`
+	FeaturesID  *int32 `json:"features_id"`
+	AllergensID *int32 `json:"allergens_id"`
+	AdditivesID *int32 `json:"additives_id"`
 }
 
 type Medium struct {
@@ -342,21 +381,15 @@ type PayloadPreferencesRel struct {
 }
 
 type Recipe struct {
-	ID              int32              `json:"id"`
-	AiThumbnailID   *int32             `json:"ai_thumbnail_id"`
-	PriceStudents   pgtype.Numeric     `json:"price_students"`
-	PriceEmployees  pgtype.Numeric     `json:"price_employees"`
-	PriceGuests     pgtype.Numeric     `json:"price_guests"`
-	MensaProviderID int32              `json:"mensa_provider_id"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-}
-
-type RecipesLocale struct {
-	Name     string  `json:"name"`
-	ID       int32   `json:"id"`
-	Locale   Locales `json:"_locale"`
-	ParentID int32   `json:"_parent_id"`
+	ID              int32                   `json:"id"`
+	AiThumbnailID   *int32                  `json:"ai_thumbnail_id"`
+	PriceStudents   pgtype.Numeric          `json:"price_students"`
+	PriceEmployees  pgtype.Numeric          `json:"price_employees"`
+	PriceGuests     pgtype.Numeric          `json:"price_guests"`
+	MensaProviderID int32                   `json:"mensa_provider_id"`
+	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
+	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
+	Category        NullEnumRecipesCategory `json:"category"`
 }
 
 type RecipesRel struct {
