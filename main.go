@@ -10,6 +10,7 @@ import (
 	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,8 @@ func loadConfig() (*pgx.ConnConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 
 	return pgx.ParseConfig(fmt.Sprintf(
 		"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
@@ -40,11 +43,12 @@ func main() {
 
 	for {
 		// Database connection
-		pgConfig, err := loadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-		conn, err := pgx.ConnectConfig(ctx, pgConfig)
+		//pgConfig, err := loadConfig()
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+		//conn, err := pgx.ConnectConfig(ctx, pgConfig)
 		if err != nil {
 			fmt.Printf("Unable to connect to database: %v\n", err)
 			panic(err)
