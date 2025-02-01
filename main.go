@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
+	"mensa-queue/adapters"
 	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
 	parsers "mensa-queue/internal/parse"
@@ -38,6 +39,20 @@ func main() {
 		log.Printf("Error loading .env file\n")
 	}
 
+	providerAdapters := []adapters.Adapter{
+		adapters.NewStwBrandenburgWestAdapter("Studierendenwerk Brandenburg West"),
+	}
+
+	for _, providerAdapter := range providerAdapters {
+		providerAdapter.RegisterAdapter()
+
+		mensas := providerAdapter.GetAllMensas()
+
+		for _, mensa := range mensas {
+			mensa.RegisterMensa()
+		}
+	}
+
 	for {
 		// Database connection
 		pgConfig, err := loadConfig()
@@ -50,7 +65,16 @@ func main() {
 			panic(err)
 		}
 
-		getAllMensas(ctx, conn)
+		//getAllMensas(ctx, conn)
+		for _, providerAdapter := range providerAdapters {
+			for _, mensa := range providerAdapter.GetAllMensas() {
+				menu, err := mensa.ParseMenu()
+				if err != nil {
+					fmt.Printf("Unable to parse menu: %v\n", err)
+				}
+				fmt.Println(menu)
+			}
+		}
 
 		// TODO: Check if ComfyUI is reachable (only when my PC is on)
 		// TODO: Check if AI Image already exists before generating one
