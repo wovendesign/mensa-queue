@@ -44,5 +44,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/ericwaetke/mensa-queue:latest
-            ghcr.io/ericwaetke/mensa-queue:${{ github.sha }}
+            ghcr.io/wovendesign/mensa-queue:latest
+            ghcr.io/wovendesign/mensa-queue:${{ github.sha }}
