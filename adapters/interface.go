@@ -1,14 +1,19 @@
 package adapters
 
-import "mensa-queue/models"
+import (
+	"context"
+	"github.com/jackc/pgx/v5"
+	"mensa-queue/internal/payload"
+)
 
 // MenuParser is the common interface for all canteen adapters.
 type Adapter interface {
-	RegisterAdapter()
+	RegisterAdapter(ctx context.Context, conn *pgx.Conn) (err error)
 	GetAllMensas() []Mensa
 }
 
 type Mensa interface {
-	ParseMenu() ([]models.MenuItem, error)
-	RegisterMensa()
+	ParseMenu() ([]payload.LocalRecipe, error)
+	RegisterMensa(ctx context.Context, conn *pgx.Conn) (err error)
+	IsRegistered() bool
 }

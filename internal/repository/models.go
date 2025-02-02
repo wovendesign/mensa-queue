@@ -214,9 +214,9 @@ type AllergensLocale struct {
 
 type Feature struct {
 	ID           int32              `json:"id"`
-	VisibleSmall *bool              `json:"visible_small"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	VisibleSmall *bool              `json:"visible_small"`
 }
 
 type Info struct {
@@ -264,7 +264,7 @@ type Medium struct {
 type Mensa struct {
 	ID                 int32              `json:"id"`
 	Name               string             `json:"name"`
-	Slug               *string            `json:"slug"`
+	Slug               string             `json:"slug"`
 	AddressLatitude    pgtype.Numeric     `json:"address_latitude"`
 	AddressLongitude   pgtype.Numeric     `json:"address_longitude"`
 	AddressStreet      *string            `json:"address_street"`
@@ -275,15 +275,17 @@ type Mensa struct {
 	ProviderID         int32              `json:"provider_id"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	Uuid               string             `json:"uuid"`
 }
 
 type MensaProvider struct {
 	ID          int32              `json:"id"`
 	Name        string             `json:"name"`
-	Slug        *string            `json:"slug"`
+	Slug        string             `json:"slug"`
 	Description string             `json:"description"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Uuid        string             `json:"uuid"`
 }
 
 type Nutrient struct {
@@ -381,15 +383,15 @@ type PayloadPreferencesRel struct {
 }
 
 type Recipe struct {
-	ID              int32                   `json:"id"`
-	AiThumbnailID   *int32                  `json:"ai_thumbnail_id"`
-	PriceStudents   pgtype.Numeric          `json:"price_students"`
-	PriceEmployees  pgtype.Numeric          `json:"price_employees"`
-	PriceGuests     pgtype.Numeric          `json:"price_guests"`
-	MensaProviderID int32                   `json:"mensa_provider_id"`
-	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
-	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
-	Category        NullEnumRecipesCategory `json:"category"`
+	ID              int32               `json:"id"`
+	AiThumbnailID   *int32              `json:"ai_thumbnail_id"`
+	PriceStudents   pgtype.Numeric      `json:"price_students"`
+	PriceEmployees  pgtype.Numeric      `json:"price_employees"`
+	PriceGuests     pgtype.Numeric      `json:"price_guests"`
+	MensaProviderID int32               `json:"mensa_provider_id"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	Category        EnumRecipesCategory `json:"category"`
 }
 
 type RecipesRel struct {

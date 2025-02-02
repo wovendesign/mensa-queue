@@ -50,11 +50,11 @@ RETURNING id
 `
 
 type InsertRecipeParams struct {
-	MensaProviderID int32                   `json:"mensa_provider_id"`
-	Category        NullEnumRecipesCategory `json:"category"`
-	PriceStudents   *float64                `json:"price_students"`
-	PriceEmployees  *float64                `json:"price_employees"`
-	PriceGuests     *float64                `json:"price_guests"`
+	MensaProviderID int32               `json:"mensa_provider_id"`
+	Category        EnumRecipesCategory `json:"category"`
+	PriceStudents   *float64            `json:"price_students"`
+	PriceEmployees  *float64            `json:"price_employees"`
+	PriceGuests     *float64            `json:"price_guests"`
 }
 
 func (q *Queries) InsertRecipe(ctx context.Context, arg InsertRecipeParams) (int32, error) {

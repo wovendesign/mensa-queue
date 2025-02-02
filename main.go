@@ -43,15 +43,35 @@ func main() {
 		adapters.NewStwBrandenburgWestAdapter("Studierendenwerk Brandenburg West"),
 	}
 
+	// Database connection
+	pgConfig, err := loadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	conn, err := pgx.ConnectConfig(ctx, pgConfig)
+	if err != nil {
+		fmt.Printf("Unable to connect to database: %v\n", err)
+		panic(err)
+	}
+
 	for _, providerAdapter := range providerAdapters {
-		providerAdapter.RegisterAdapter()
+		err = providerAdapter.RegisterAdapter(ctx, conn)
+		if err != nil {
+			fmt.Printf("Unable to register adapter: %v\n", err)
+			continue
+		}
 
 		mensas := providerAdapter.GetAllMensas()
 
 		for _, mensa := range mensas {
-			mensa.RegisterMensa()
+			err = mensa.RegisterMensa(ctx, conn)
+			if err != nil {
+				fmt.Printf("Unable to register mensa: %v\n", err)
+			}
 		}
 	}
+
+	conn.Close(ctx)
 
 	for {
 		// Database connection
@@ -65,14 +85,27 @@ func main() {
 			panic(err)
 		}
 
-		//getAllMensas(ctx, conn)
 		for _, providerAdapter := range providerAdapters {
 			for _, mensa := range providerAdapter.GetAllMensas() {
+				if !mensa.IsRegistered() {
+					continue
+				}
 				menu, err := mensa.ParseMenu()
 				if err != nil {
 					fmt.Printf("Unable to parse menu: %v\n", err)
 				}
 				fmt.Println(menu)
+
+				recipeId, err := payload.InsertRecipe(recipe, t, mensa, ctx, conn)
+				if err != nil {
+					fmt.Println("Error inserting recipe:", err)
+					continue
+				}
+
+				recipes = append(recipes, &images.RecipeData{
+					ID:     recipeId,
+					Prompt: food.Zusatzinformationen.GerichtnameAlternative,
+				})
 			}
 		}
 
@@ -80,7 +113,10 @@ func main() {
 		// TODO: Check if AI Image already exists before generating one
 		// go images.GenerateImages(recipes, ctx)
 
-		conn.Close(ctx)
+		err = conn.Close(ctx)
+		if err != nil {
+			panic(err)
+		}
 
 		time.Sleep(time.Hour)
 	}

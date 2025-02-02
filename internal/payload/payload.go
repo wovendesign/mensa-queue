@@ -56,10 +56,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 			PriceEmployees:  recipe.Recipe.PriceEmployees,
 			PriceGuests:     recipe.Recipe.PriceGuests,
 			MensaProviderID: 1,
-			Category: repository.NullEnumRecipesCategory{
-				EnumRecipesCategory: recipe.Category,
-				Valid:               true,
-			},
+			Category:        "main",
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert recipe: %v\n", err)

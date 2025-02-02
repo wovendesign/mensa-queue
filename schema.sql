@@ -2,13 +2,12 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.6
--- Dumped by pg_dump version 17.2
+-- Dumped from database version 16.4 (Debian 16.4-1.pgdg120+1)
+-- Dumped by pg_dump version 16.3
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -16,6 +15,22 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: mensauser
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+ALTER SCHEMA public OWNER TO mensauser;
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: mensauser
+--
+
+COMMENT ON SCHEMA public IS '';
+
 
 --
 -- Name: _locales; Type: TYPE; Schema: public; Owner: mensauser
@@ -224,9 +239,9 @@ ALTER SEQUENCE public.allergens_locales_id_seq OWNED BY public.allergens_locales
 
 CREATE TABLE public.features (
     id integer NOT NULL,
-    visible_small boolean DEFAULT false,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
-    created_at timestamp(3) with time zone DEFAULT now() NOT NULL
+    created_at timestamp(3) with time zone DEFAULT now() NOT NULL,
+    visible_small boolean DEFAULT false
 );
 
 
@@ -419,7 +434,7 @@ ALTER SEQUENCE public.media_id_seq OWNED BY public.media.id;
 CREATE TABLE public.mensa (
     id integer NOT NULL,
     name character varying NOT NULL,
-    slug character varying,
+    slug character varying NOT NULL,
     address_latitude numeric NOT NULL,
     address_longitude numeric NOT NULL,
     address_street character varying,
@@ -429,7 +444,8 @@ CREATE TABLE public.mensa (
     description character varying,
     provider_id integer NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
-    created_at timestamp(3) with time zone DEFAULT now() NOT NULL
+    created_at timestamp(3) with time zone DEFAULT now() NOT NULL,
+    uuid character varying NOT NULL
 );
 
 
@@ -464,10 +480,11 @@ ALTER SEQUENCE public.mensa_id_seq OWNED BY public.mensa.id;
 CREATE TABLE public.mensa_provider (
     id integer NOT NULL,
     name character varying NOT NULL,
-    slug character varying,
+    slug character varying NOT NULL,
     description character varying NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
-    created_at timestamp(3) with time zone DEFAULT now() NOT NULL
+    created_at timestamp(3) with time zone DEFAULT now() NOT NULL,
+    uuid character varying NOT NULL
 );
 
 
@@ -892,7 +909,7 @@ CREATE TABLE public.recipes (
     mensa_provider_id integer NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
     created_at timestamp(3) with time zone DEFAULT now() NOT NULL,
-    category public.enum_recipes_category
+    category public.enum_recipes_category DEFAULT 'main'::public.enum_recipes_category NOT NULL
 );
 
 
@@ -1597,87 +1614,87 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: additives_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: additives_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX additives_created_at_1_idx ON public.additives USING btree (created_at);
-
-
---
--- Name: additives_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX additives_updated_at_1_idx ON public.additives USING btree (updated_at);
+CREATE INDEX additives_created_at_5_idx ON public.additives USING btree (created_at);
 
 
 --
--- Name: allergens_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: additives_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX allergens_created_at_1_idx ON public.allergens USING btree (created_at);
-
-
---
--- Name: allergens_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX allergens_updated_at_1_idx ON public.allergens USING btree (updated_at);
+CREATE INDEX additives_updated_at_5_idx ON public.additives USING btree (updated_at);
 
 
 --
--- Name: features_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: allergens_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX features_created_at_1_idx ON public.features USING btree (created_at);
-
-
---
--- Name: features_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX features_updated_at_1_idx ON public.features USING btree (updated_at);
+CREATE INDEX allergens_created_at_5_idx ON public.allergens USING btree (created_at);
 
 
 --
--- Name: info_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: allergens_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX info_created_at_1_idx ON public.info USING btree (created_at);
-
-
---
--- Name: info_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX info_updated_at_1_idx ON public.info USING btree (updated_at);
+CREATE INDEX allergens_updated_at_5_idx ON public.allergens USING btree (updated_at);
 
 
 --
--- Name: locale_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: features_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX locale_created_at_1_idx ON public.locale USING btree (created_at);
-
-
---
--- Name: locale_rels_additives_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX locale_rels_additives_id_1_idx ON public.locale_rels USING btree (additives_id);
+CREATE INDEX features_created_at_5_idx ON public.features USING btree (created_at);
 
 
 --
--- Name: locale_rels_allergens_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: features_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX locale_rels_allergens_id_1_idx ON public.locale_rels USING btree (allergens_id);
+CREATE INDEX features_updated_at_5_idx ON public.features USING btree (updated_at);
 
 
 --
--- Name: locale_rels_features_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: info_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX locale_rels_features_id_1_idx ON public.locale_rels USING btree (features_id);
+CREATE INDEX info_created_at_5_idx ON public.info USING btree (created_at);
+
+
+--
+-- Name: info_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX info_updated_at_5_idx ON public.info USING btree (updated_at);
+
+
+--
+-- Name: locale_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX locale_created_at_5_idx ON public.locale USING btree (created_at);
+
+
+--
+-- Name: locale_rels_additives_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX locale_rels_additives_id_5_idx ON public.locale_rels USING btree (additives_id);
+
+
+--
+-- Name: locale_rels_allergens_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX locale_rels_allergens_id_5_idx ON public.locale_rels USING btree (allergens_id);
+
+
+--
+-- Name: locale_rels_features_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX locale_rels_features_id_5_idx ON public.locale_rels USING btree (features_id);
 
 
 --
@@ -1702,290 +1719,304 @@ CREATE INDEX locale_rels_path_idx ON public.locale_rels USING btree (path);
 
 
 --
--- Name: locale_rels_recipes_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: locale_rels_recipes_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX locale_rels_recipes_id_1_idx ON public.locale_rels USING btree (recipes_id);
+CREATE INDEX locale_rels_recipes_id_5_idx ON public.locale_rels USING btree (recipes_id);
 
 
 --
--- Name: locale_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: locale_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX locale_updated_at_1_idx ON public.locale USING btree (updated_at);
+CREATE INDEX locale_updated_at_5_idx ON public.locale USING btree (updated_at);
 
 
 --
--- Name: media_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: media_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX media_created_at_1_idx ON public.media USING btree (created_at);
+CREATE INDEX media_created_at_5_idx ON public.media USING btree (created_at);
 
 
 --
--- Name: media_filename_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: media_filename_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE UNIQUE INDEX media_filename_1_idx ON public.media USING btree (filename);
+CREATE UNIQUE INDEX media_filename_5_idx ON public.media USING btree (filename);
 
 
 --
--- Name: media_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: media_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX media_updated_at_1_idx ON public.media USING btree (updated_at);
+CREATE INDEX media_updated_at_5_idx ON public.media USING btree (updated_at);
 
 
 --
--- Name: mensa_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_created_at_1_idx ON public.mensa USING btree (created_at);
+CREATE INDEX mensa_created_at_5_idx ON public.mensa USING btree (created_at);
 
 
 --
--- Name: mensa_provider_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_provider_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_provider_1_idx ON public.mensa USING btree (provider_id);
+CREATE INDEX mensa_provider_5_idx ON public.mensa USING btree (provider_id);
 
 
 --
--- Name: mensa_provider_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_provider_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_provider_created_at_1_idx ON public.mensa_provider USING btree (created_at);
+CREATE INDEX mensa_provider_created_at_5_idx ON public.mensa_provider USING btree (created_at);
 
 
 --
--- Name: mensa_provider_slug_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_provider_slug_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_provider_slug_1_idx ON public.mensa_provider USING btree (slug);
+CREATE INDEX mensa_provider_slug_5_idx ON public.mensa_provider USING btree (slug);
 
 
 --
--- Name: mensa_provider_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_provider_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_provider_updated_at_1_idx ON public.mensa_provider USING btree (updated_at);
+CREATE INDEX mensa_provider_updated_at_5_idx ON public.mensa_provider USING btree (updated_at);
 
 
 --
--- Name: mensa_slug_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_provider_uuid_3_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_slug_1_idx ON public.mensa USING btree (slug);
+CREATE UNIQUE INDEX mensa_provider_uuid_3_idx ON public.mensa_provider USING btree (uuid);
 
 
 --
--- Name: mensa_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_slug_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX mensa_updated_at_1_idx ON public.mensa USING btree (updated_at);
+CREATE INDEX mensa_slug_5_idx ON public.mensa USING btree (slug);
 
 
 --
--- Name: nutrient_labels_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_labels_created_at_1_idx ON public.nutrient_labels USING btree (created_at);
+CREATE INDEX mensa_updated_at_5_idx ON public.mensa USING btree (updated_at);
 
 
 --
--- Name: nutrient_labels_name_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: mensa_uuid_4_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE UNIQUE INDEX nutrient_labels_name_1_idx ON public.nutrient_labels_locales USING btree (name, _locale);
+CREATE UNIQUE INDEX mensa_uuid_4_idx ON public.mensa USING btree (uuid);
 
 
 --
--- Name: nutrient_labels_unit_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_labels_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_labels_unit_1_idx ON public.nutrient_labels USING btree (unit_id);
+CREATE INDEX nutrient_labels_created_at_5_idx ON public.nutrient_labels USING btree (created_at);
 
 
 --
--- Name: nutrient_labels_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_labels_name_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_labels_updated_at_1_idx ON public.nutrient_labels USING btree (updated_at);
+CREATE UNIQUE INDEX nutrient_labels_name_5_idx ON public.nutrient_labels_locales USING btree (name, _locale);
 
 
 --
--- Name: nutrient_units_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_labels_unit_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_units_created_at_1_idx ON public.nutrient_units USING btree (created_at);
+CREATE INDEX nutrient_labels_unit_5_idx ON public.nutrient_labels USING btree (unit_id);
 
 
 --
--- Name: nutrient_units_name_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_labels_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE UNIQUE INDEX nutrient_units_name_1_idx ON public.nutrient_units USING btree (name);
+CREATE INDEX nutrient_labels_updated_at_5_idx ON public.nutrient_labels USING btree (updated_at);
 
 
 --
--- Name: nutrient_units_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_units_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_units_updated_at_1_idx ON public.nutrient_units USING btree (updated_at);
+CREATE INDEX nutrient_units_created_at_5_idx ON public.nutrient_units USING btree (created_at);
 
 
 --
--- Name: nutrient_values_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_units_name_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_values_created_at_1_idx ON public.nutrient_values USING btree (created_at);
+CREATE UNIQUE INDEX nutrient_units_name_5_idx ON public.nutrient_units USING btree (name);
 
 
 --
--- Name: nutrient_values_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_units_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrient_values_updated_at_1_idx ON public.nutrient_values USING btree (updated_at);
+CREATE INDEX nutrient_units_updated_at_5_idx ON public.nutrient_units USING btree (updated_at);
 
 
 --
--- Name: nutrient_values_value_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_values_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE UNIQUE INDEX nutrient_values_value_1_idx ON public.nutrient_values USING btree (value);
+CREATE INDEX nutrient_values_created_at_5_idx ON public.nutrient_values USING btree (created_at);
 
 
 --
--- Name: nutrients_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_values_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrients_created_at_1_idx ON public.nutrients USING btree (created_at);
+CREATE INDEX nutrient_values_updated_at_5_idx ON public.nutrient_values USING btree (updated_at);
 
 
 --
--- Name: nutrients_nutrient_label_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrient_values_value_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrients_nutrient_label_1_idx ON public.nutrients USING btree (nutrient_label_id);
+CREATE UNIQUE INDEX nutrient_values_value_5_idx ON public.nutrient_values USING btree (value);
 
 
 --
--- Name: nutrients_nutrient_value_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrients_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrients_nutrient_value_1_idx ON public.nutrients USING btree (nutrient_value_id);
+CREATE INDEX nutrients_created_at_5_idx ON public.nutrients USING btree (created_at);
 
 
 --
--- Name: nutrients_recipe_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrients_nutrient_label_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrients_recipe_1_idx ON public.nutrients USING btree (recipe_id);
+CREATE INDEX nutrients_nutrient_label_5_idx ON public.nutrients USING btree (nutrient_label_id);
 
 
 --
--- Name: nutrients_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrients_nutrient_value_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX nutrients_updated_at_1_idx ON public.nutrients USING btree (updated_at);
+CREATE INDEX nutrients_nutrient_value_5_idx ON public.nutrients USING btree (nutrient_value_id);
 
 
 --
--- Name: payload_locked_documents_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrients_recipe_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_created_at_1_idx ON public.payload_locked_documents USING btree (created_at);
+CREATE INDEX nutrients_recipe_5_idx ON public.nutrients USING btree (recipe_id);
 
 
 --
--- Name: payload_locked_documents_global_slug_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: nutrients_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_global_slug_1_idx ON public.payload_locked_documents USING btree (global_slug);
+CREATE INDEX nutrients_updated_at_5_idx ON public.nutrients USING btree (updated_at);
 
 
 --
--- Name: payload_locked_documents_rels_additives_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_additives_id_1_idx ON public.payload_locked_documents_rels USING btree (additives_id);
+CREATE INDEX payload_locked_documents_created_at_5_idx ON public.payload_locked_documents USING btree (created_at);
 
 
 --
--- Name: payload_locked_documents_rels_allergens_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_global_slug_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_allergens_id_1_idx ON public.payload_locked_documents_rels USING btree (allergens_id);
+CREATE INDEX payload_locked_documents_global_slug_5_idx ON public.payload_locked_documents USING btree (global_slug);
 
 
 --
--- Name: payload_locked_documents_rels_features_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_additives_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_features_id_1_idx ON public.payload_locked_documents_rels USING btree (features_id);
+CREATE INDEX payload_locked_documents_rels_additives_id_5_idx ON public.payload_locked_documents_rels USING btree (additives_id);
 
 
 --
--- Name: payload_locked_documents_rels_info_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_allergens_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_info_id_1_idx ON public.payload_locked_documents_rels USING btree (info_id);
+CREATE INDEX payload_locked_documents_rels_allergens_id_5_idx ON public.payload_locked_documents_rels USING btree (allergens_id);
 
 
 --
--- Name: payload_locked_documents_rels_locale_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_features_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_locale_id_1_idx ON public.payload_locked_documents_rels USING btree (locale_id);
+CREATE INDEX payload_locked_documents_rels_features_id_5_idx ON public.payload_locked_documents_rels USING btree (features_id);
 
 
 --
--- Name: payload_locked_documents_rels_media_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_info_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_media_id_1_idx ON public.payload_locked_documents_rels USING btree (media_id);
+CREATE INDEX payload_locked_documents_rels_info_id_5_idx ON public.payload_locked_documents_rels USING btree (info_id);
 
 
 --
--- Name: payload_locked_documents_rels_mensa_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_locale_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_mensa_id_1_idx ON public.payload_locked_documents_rels USING btree (mensa_id);
+CREATE INDEX payload_locked_documents_rels_locale_id_5_idx ON public.payload_locked_documents_rels USING btree (locale_id);
 
 
 --
--- Name: payload_locked_documents_rels_mensa_provider_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_media_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_mensa_provider_id_1_idx ON public.payload_locked_documents_rels USING btree (mensa_provider_id);
+CREATE INDEX payload_locked_documents_rels_media_id_5_idx ON public.payload_locked_documents_rels USING btree (media_id);
 
 
 --
--- Name: payload_locked_documents_rels_nutrient_labels_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_mensa_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_nutrient_labels_id_1_idx ON public.payload_locked_documents_rels USING btree (nutrient_labels_id);
+CREATE INDEX payload_locked_documents_rels_mensa_id_5_idx ON public.payload_locked_documents_rels USING btree (mensa_id);
 
 
 --
--- Name: payload_locked_documents_rels_nutrient_units_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_mensa_provider_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_nutrient_units_id_1_idx ON public.payload_locked_documents_rels USING btree (nutrient_units_id);
+CREATE INDEX payload_locked_documents_rels_mensa_provider_id_5_idx ON public.payload_locked_documents_rels USING btree (mensa_provider_id);
 
 
 --
--- Name: payload_locked_documents_rels_nutrient_values_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_nutrient_labels_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_nutrient_values_id_1_idx ON public.payload_locked_documents_rels USING btree (nutrient_values_id);
+CREATE INDEX payload_locked_documents_rels_nutrient_labels_id_5_idx ON public.payload_locked_documents_rels USING btree (nutrient_labels_id);
 
 
 --
--- Name: payload_locked_documents_rels_nutrients_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_nutrient_units_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_nutrients_id_1_idx ON public.payload_locked_documents_rels USING btree (nutrients_id);
+CREATE INDEX payload_locked_documents_rels_nutrient_units_id_5_idx ON public.payload_locked_documents_rels USING btree (nutrient_units_id);
+
+
+--
+-- Name: payload_locked_documents_rels_nutrient_values_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_locked_documents_rels_nutrient_values_id_5_idx ON public.payload_locked_documents_rels USING btree (nutrient_values_id);
+
+
+--
+-- Name: payload_locked_documents_rels_nutrients_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_locked_documents_rels_nutrients_id_5_idx ON public.payload_locked_documents_rels USING btree (nutrients_id);
 
 
 --
@@ -2010,80 +2041,80 @@ CREATE INDEX payload_locked_documents_rels_path_idx ON public.payload_locked_doc
 
 
 --
--- Name: payload_locked_documents_rels_recipes_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_recipes_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_recipes_id_1_idx ON public.payload_locked_documents_rels USING btree (recipes_id);
-
-
---
--- Name: payload_locked_documents_rels_serving_time_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_locked_documents_rels_serving_time_id_1_idx ON public.payload_locked_documents_rels USING btree (serving_time_id);
+CREATE INDEX payload_locked_documents_rels_recipes_id_5_idx ON public.payload_locked_documents_rels USING btree (recipes_id);
 
 
 --
--- Name: payload_locked_documents_rels_servings_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_serving_time_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_servings_id_1_idx ON public.payload_locked_documents_rels USING btree (servings_id);
-
-
---
--- Name: payload_locked_documents_rels_time_slot_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_locked_documents_rels_time_slot_id_1_idx ON public.payload_locked_documents_rels USING btree (time_slot_id);
+CREATE INDEX payload_locked_documents_rels_serving_time_id_5_idx ON public.payload_locked_documents_rels USING btree (serving_time_id);
 
 
 --
--- Name: payload_locked_documents_rels_user_image_uploads_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_servings_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_rels_user_image_uploads_id_1_idx ON public.payload_locked_documents_rels USING btree (user_image_uploads_id);
-
-
---
--- Name: payload_locked_documents_rels_users_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_locked_documents_rels_users_id_1_idx ON public.payload_locked_documents_rels USING btree (users_id);
+CREATE INDEX payload_locked_documents_rels_servings_id_5_idx ON public.payload_locked_documents_rels USING btree (servings_id);
 
 
 --
--- Name: payload_locked_documents_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_time_slot_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_locked_documents_updated_at_1_idx ON public.payload_locked_documents USING btree (updated_at);
-
-
---
--- Name: payload_migrations_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_migrations_created_at_1_idx ON public.payload_migrations USING btree (created_at);
+CREATE INDEX payload_locked_documents_rels_time_slot_id_5_idx ON public.payload_locked_documents_rels USING btree (time_slot_id);
 
 
 --
--- Name: payload_migrations_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_user_image_uploads_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_migrations_updated_at_1_idx ON public.payload_migrations USING btree (updated_at);
-
-
---
--- Name: payload_preferences_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_preferences_created_at_1_idx ON public.payload_preferences USING btree (created_at);
+CREATE INDEX payload_locked_documents_rels_user_image_uploads_id_5_idx ON public.payload_locked_documents_rels USING btree (user_image_uploads_id);
 
 
 --
--- Name: payload_preferences_key_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_locked_documents_rels_users_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_preferences_key_1_idx ON public.payload_preferences USING btree (key);
+CREATE INDEX payload_locked_documents_rels_users_id_5_idx ON public.payload_locked_documents_rels USING btree (users_id);
+
+
+--
+-- Name: payload_locked_documents_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_locked_documents_updated_at_5_idx ON public.payload_locked_documents USING btree (updated_at);
+
+
+--
+-- Name: payload_migrations_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_migrations_created_at_5_idx ON public.payload_migrations USING btree (created_at);
+
+
+--
+-- Name: payload_migrations_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_migrations_updated_at_5_idx ON public.payload_migrations USING btree (updated_at);
+
+
+--
+-- Name: payload_preferences_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_preferences_created_at_5_idx ON public.payload_preferences USING btree (created_at);
+
+
+--
+-- Name: payload_preferences_key_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX payload_preferences_key_5_idx ON public.payload_preferences USING btree (key);
 
 
 --
@@ -2108,59 +2139,59 @@ CREATE INDEX payload_preferences_rels_path_idx ON public.payload_preferences_rel
 
 
 --
--- Name: payload_preferences_rels_users_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_preferences_rels_users_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX payload_preferences_rels_users_id_1_idx ON public.payload_preferences_rels USING btree (users_id);
-
-
---
--- Name: payload_preferences_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX payload_preferences_updated_at_1_idx ON public.payload_preferences USING btree (updated_at);
+CREATE INDEX payload_preferences_rels_users_id_5_idx ON public.payload_preferences_rels USING btree (users_id);
 
 
 --
--- Name: recipes_ai_thumbnail_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: payload_preferences_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX recipes_ai_thumbnail_1_idx ON public.recipes USING btree (ai_thumbnail_id);
-
-
---
--- Name: recipes_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX recipes_created_at_1_idx ON public.recipes USING btree (created_at);
+CREATE INDEX payload_preferences_updated_at_5_idx ON public.payload_preferences USING btree (updated_at);
 
 
 --
--- Name: recipes_mensa_provider_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: recipes_ai_thumbnail_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX recipes_mensa_provider_1_idx ON public.recipes USING btree (mensa_provider_id);
-
-
---
--- Name: recipes_rels_additives_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX recipes_rels_additives_id_1_idx ON public.recipes_rels USING btree (additives_id);
+CREATE INDEX recipes_ai_thumbnail_5_idx ON public.recipes USING btree (ai_thumbnail_id);
 
 
 --
--- Name: recipes_rels_allergens_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: recipes_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX recipes_rels_allergens_id_1_idx ON public.recipes_rels USING btree (allergens_id);
+CREATE INDEX recipes_created_at_5_idx ON public.recipes USING btree (created_at);
 
 
 --
--- Name: recipes_rels_features_id_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: recipes_mensa_provider_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX recipes_rels_features_id_1_idx ON public.recipes_rels USING btree (features_id);
+CREATE INDEX recipes_mensa_provider_5_idx ON public.recipes USING btree (mensa_provider_id);
+
+
+--
+-- Name: recipes_rels_additives_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX recipes_rels_additives_id_5_idx ON public.recipes_rels USING btree (additives_id);
+
+
+--
+-- Name: recipes_rels_allergens_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX recipes_rels_allergens_id_5_idx ON public.recipes_rels USING btree (allergens_id);
+
+
+--
+-- Name: recipes_rels_features_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX recipes_rels_features_id_5_idx ON public.recipes_rels USING btree (features_id);
 
 
 --
@@ -2185,122 +2216,122 @@ CREATE INDEX recipes_rels_path_idx ON public.recipes_rels USING btree (path);
 
 
 --
--- Name: recipes_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: recipes_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX recipes_updated_at_1_idx ON public.recipes USING btree (updated_at);
-
-
---
--- Name: serving_time_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX serving_time_created_at_1_idx ON public.serving_time USING btree (created_at);
+CREATE INDEX recipes_updated_at_5_idx ON public.recipes USING btree (updated_at);
 
 
 --
--- Name: serving_time_mensa_info_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: serving_time_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX serving_time_mensa_info_1_idx ON public.serving_time USING btree (mensa_info_id);
-
-
---
--- Name: serving_time_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX serving_time_updated_at_1_idx ON public.serving_time USING btree (updated_at);
+CREATE INDEX serving_time_created_at_5_idx ON public.serving_time USING btree (created_at);
 
 
 --
--- Name: servings_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: serving_time_mensa_info_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX servings_created_at_1_idx ON public.servings USING btree (created_at);
-
-
---
--- Name: servings_mensa_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX servings_mensa_1_idx ON public.servings USING btree (mensa_id);
+CREATE INDEX serving_time_mensa_info_5_idx ON public.serving_time USING btree (mensa_info_id);
 
 
 --
--- Name: servings_recipe_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: serving_time_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX servings_recipe_1_idx ON public.servings USING btree (recipe_id);
-
-
---
--- Name: servings_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX servings_updated_at_1_idx ON public.servings USING btree (updated_at);
+CREATE INDEX serving_time_updated_at_5_idx ON public.serving_time USING btree (updated_at);
 
 
 --
--- Name: time_slot_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: servings_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX time_slot_created_at_1_idx ON public.time_slot USING btree (created_at);
-
-
---
--- Name: time_slot_serving_time_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX time_slot_serving_time_1_idx ON public.time_slot USING btree (serving_time_id);
+CREATE INDEX servings_created_at_5_idx ON public.servings USING btree (created_at);
 
 
 --
--- Name: time_slot_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: servings_mensa_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX time_slot_updated_at_1_idx ON public.time_slot USING btree (updated_at);
-
-
---
--- Name: user_image_uploads_image_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX user_image_uploads_image_1_idx ON public.user_image_uploads USING btree (image_id);
+CREATE INDEX servings_mensa_5_idx ON public.servings USING btree (mensa_id);
 
 
 --
--- Name: user_image_uploads_recipe_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: servings_recipe_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX user_image_uploads_recipe_1_idx ON public.user_image_uploads USING btree (recipe_id);
-
-
---
--- Name: user_image_uploads_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE INDEX user_image_uploads_updated_at_1_idx ON public.user_image_uploads USING btree (updated_at);
+CREATE INDEX servings_recipe_5_idx ON public.servings USING btree (recipe_id);
 
 
 --
--- Name: users_created_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: servings_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX users_created_at_1_idx ON public.users USING btree (created_at);
-
-
---
--- Name: users_email_1_idx; Type: INDEX; Schema: public; Owner: mensauser
---
-
-CREATE UNIQUE INDEX users_email_1_idx ON public.users USING btree (email);
+CREATE INDEX servings_updated_at_5_idx ON public.servings USING btree (updated_at);
 
 
 --
--- Name: users_updated_at_1_idx; Type: INDEX; Schema: public; Owner: mensauser
+-- Name: time_slot_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
 --
 
-CREATE INDEX users_updated_at_1_idx ON public.users USING btree (updated_at);
+CREATE INDEX time_slot_created_at_5_idx ON public.time_slot USING btree (created_at);
+
+
+--
+-- Name: time_slot_serving_time_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX time_slot_serving_time_5_idx ON public.time_slot USING btree (serving_time_id);
+
+
+--
+-- Name: time_slot_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX time_slot_updated_at_5_idx ON public.time_slot USING btree (updated_at);
+
+
+--
+-- Name: user_image_uploads_image_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX user_image_uploads_image_5_idx ON public.user_image_uploads USING btree (image_id);
+
+
+--
+-- Name: user_image_uploads_recipe_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX user_image_uploads_recipe_5_idx ON public.user_image_uploads USING btree (recipe_id);
+
+
+--
+-- Name: user_image_uploads_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX user_image_uploads_updated_at_5_idx ON public.user_image_uploads USING btree (updated_at);
+
+
+--
+-- Name: users_created_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX users_created_at_5_idx ON public.users USING btree (created_at);
+
+
+--
+-- Name: users_email_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE UNIQUE INDEX users_email_5_idx ON public.users USING btree (email);
+
+
+--
+-- Name: users_updated_at_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX users_updated_at_5_idx ON public.users USING btree (updated_at);
 
 
 --
@@ -2669,6 +2700,13 @@ ALTER TABLE ONLY public.user_image_uploads
 
 ALTER TABLE ONLY public.user_image_uploads
     ADD CONSTRAINT user_image_uploads_recipe_id_recipes_id_fk FOREIGN KEY (recipe_id) REFERENCES public.recipes(id) ON DELETE SET NULL;
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: mensauser
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 
 
 --
