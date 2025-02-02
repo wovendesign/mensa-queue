@@ -11,6 +11,7 @@ import (
 	"mensa-queue/internal/images"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,11 +44,11 @@ func main() {
 	}
 
 	// Database connection
-	pgConfig, err := loadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-	conn, err := pgx.ConnectConfig(ctx, pgConfig)
+	//pgConfig, err := loadConfig()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Printf("Unable to connect to database: %v\n", err)
 		panic(err)
