@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/joho/godotenv"
-	"log"
 	"mensa-queue/adapters"
 	stw_brandenburg_west "mensa-queue/adapters/stw-brandenburg-west"
-	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
@@ -19,35 +16,13 @@ import (
 
 var recipes images.Recipes
 
-func loadConfig() (*pgx.ConnConfig, error) {
-	cfg, err := config.NewDatabase()
-	if err != nil {
-		return nil, err
-	}
-
-	return pgx.ParseConfig(fmt.Sprintf(
-		"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
-		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode,
-	))
-}
-
 func main() {
 	ctx := context.Background()
-
-	err := godotenv.Load() // 👈 load .env file
-	if err != nil {
-		log.Printf("Error loading .env file\n")
-	}
 
 	providerAdapters := []adapters.Adapter{
 		stw_brandenburg_west.NewAdapter("Studierendenwerk Brandenburg West"),
 	}
 
-	// Database connection
-	//pgConfig, err := loadConfig()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Printf("Unable to connect to database: %v\n", err)
@@ -75,11 +50,7 @@ func main() {
 
 	for {
 		// Database connection
-		pgConfig, err := loadConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-		conn, err := pgx.ConnectConfig(ctx, pgConfig)
+		conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 		if err != nil {
 			fmt.Printf("Unable to connect to database: %v\n", err)
 			panic(err)
