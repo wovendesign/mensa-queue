@@ -1,46 +1,12 @@
-package adapters
+package stw_brandenburg_west
 
 import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"mensa-queue/internal/payload"
+	"mensa-queue/adapters"
 	"mensa-queue/internal/repository"
 )
-
-type StwBrandenburgWestMensa struct {
-	Provider     *StwBrandenburgWestAdapter
-	StwID        int
-	MensaHubID   *int32
-	Uuid         string
-	isRegistered bool
-	Name         string
-}
-
-func (m *StwBrandenburgWestMensa) RegisterMensa(ctx context.Context, conn *pgx.Conn) (err error) {
-	repo := repository.New(conn)
-	id, err := repo.InsertMensa(ctx, repository.InsertMensaParams{
-		Name:        m.Name,
-		Description: nil,
-		Slug:        m.Name,
-		Uuid:        m.Uuid,
-		ProviderID:  *m.Provider.MensaHubID,
-	})
-	if err != nil {
-		return err
-	}
-	m.MensaHubID = &id
-	m.isRegistered = true
-	return nil
-}
-
-func (m *StwBrandenburgWestMensa) ParseMenu() ([]payload.LocalRecipe, error) {
-	return nil, nil
-}
-
-func (m *StwBrandenburgWestMensa) IsRegistered() bool {
-	return m.isRegistered
-}
 
 type StwBrandenburgWestAdapter struct {
 	Name         string
@@ -50,7 +16,7 @@ type StwBrandenburgWestAdapter struct {
 	isRegistered bool
 }
 
-func NewStwBrandenburgWestAdapter(name string) *StwBrandenburgWestAdapter {
+func NewAdapter(name string) *StwBrandenburgWestAdapter {
 	adapter := &StwBrandenburgWestAdapter{
 		Name: name,
 		Uuid: "ad050c8a-cd7c-491c-a905-0aee84ae449a",
@@ -62,6 +28,42 @@ func NewStwBrandenburgWestAdapter(name string) *StwBrandenburgWestAdapter {
 			StwID:    9600,
 			Name:     "Neues Palais",
 			Uuid:     "7ee922a5-28d5-4726-a6a0-0905b79b3396",
+		},
+		{
+			Provider: adapter,
+			StwID:    9601,
+			Name:     "Griebnitzsee",
+			Uuid:     "d88eff2d-2f3f-4e03-a77d-a035ffeda4d2",
+		},
+		{
+			Provider: adapter,
+			StwID:    9602,
+			Name:     "Golm",
+			Uuid:     "097826b0-3943-4727-8307-649179bc1d76",
+		},
+		{
+			Provider: adapter,
+			StwID:    9603,
+			Name:     "Filmuniversität",
+			Uuid:     "5bfef986-0531-4fc5-a5e8-bae7dfbf8c20",
+		},
+		{
+			Provider: adapter,
+			StwID:    9604,
+			Name:     "FHP",
+			Uuid:     "799301f4-efa3-41cf-914b-c2b1ed58bb1f",
+		},
+		{
+			Provider: adapter,
+			StwID:    9605,
+			Name:     "Wildau",
+			Uuid:     "52f71c86-5e10-42bf-8b23-64d45fe62fa5",
+		},
+		{
+			Provider: adapter,
+			StwID:    9606,
+			Name:     "Brandenburg",
+			Uuid:     "9c09d17d-57dc-43f1-892c-ac11e03f492f",
 		},
 	}
 
@@ -85,8 +87,8 @@ func (a *StwBrandenburgWestAdapter) RegisterAdapter(ctx context.Context, conn *p
 	return nil
 }
 
-func (a *StwBrandenburgWestAdapter) GetAllMensas() []Mensa {
-	mensas := make([]Mensa, len(a.Mensas))
+func (a *StwBrandenburgWestAdapter) GetAllMensas() []adapters.Mensa {
+	mensas := make([]adapters.Mensa, len(a.Mensas))
 	for i, mensa := range a.Mensas {
 		mensas[i] = mensa // StwBrandenburgWestMensa implements Mensa, so this is valid
 	}

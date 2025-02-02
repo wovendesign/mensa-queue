@@ -6,12 +6,11 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"mensa-queue/adapters"
+	stw_brandenburg_west "mensa-queue/adapters/stw-brandenburg-west"
 	"mensa-queue/internal/config"
 	"mensa-queue/internal/images"
-	parsers "mensa-queue/internal/parse"
 	"mensa-queue/internal/payload"
 	"mensa-queue/internal/repository"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,7 +39,7 @@ func main() {
 	}
 
 	providerAdapters := []adapters.Adapter{
-		adapters.NewStwBrandenburgWestAdapter("Studierendenwerk Brandenburg West"),
+		stw_brandenburg_west.NewAdapter("Studierendenwerk Brandenburg West"),
 	}
 
 	// Database connection
@@ -94,18 +93,29 @@ func main() {
 				if err != nil {
 					fmt.Printf("Unable to parse menu: %v\n", err)
 				}
-				fmt.Println(menu)
 
-				recipeId, err := payload.InsertRecipe(recipe, t, mensa, ctx, conn)
-				if err != nil {
-					fmt.Println("Error inserting recipe:", err)
-					continue
+				for _, recipe := range menu {
+					recipeId, err := payload.InsertRecipe(recipe, ctx, conn)
+					if err != nil {
+						fmt.Println("Error inserting recipe:", err)
+						continue
+					}
+
+					if mensa.AiGenerationEnabled() {
+						var enRecipeName string
+
+						for _, locale := range recipe.Localization.Locales {
+							if locale.Locale == repository.EnumLocaleLocaleEn {
+								enRecipeName = locale.Name
+							}
+						}
+
+						recipes = append(recipes, &images.RecipeData{
+							ID:     recipeId,
+							Prompt: enRecipeName,
+						})
+					}
 				}
-
-				recipes = append(recipes, &images.RecipeData{
-					ID:     recipeId,
-					Prompt: food.Zusatzinformationen.GerichtnameAlternative,
-				})
 			}
 		}
 
@@ -119,126 +129,5 @@ func main() {
 		}
 
 		time.Sleep(time.Hour)
-	}
-}
-
-func getAllMensas(ctx context.Context, conn *pgx.Conn) {
-	//mensas := []payload.Mensa{payload.NeuesPalais}
-	mensas := []payload.Mensa{payload.NeuesPalais, payload.Griebnitzsee, payload.Golm, payload.Filmuniversitaet, payload.FHP, payload.Wildau, payload.Brandenburg}
-	for _, mensa := range mensas {
-		getMensaData(mensa, ctx, conn)
-	}
-}
-
-func getMensaData(mensa payload.Mensa, ctx context.Context, conn *pgx.Conn) {
-	languages := []repository.EnumLocaleLocale{repository.EnumLocaleLocaleDe, repository.EnumLocaleLocaleEn}
-	foodContent, err := parsers.ParsePotsdamMensaData(mensa)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	additiveMap, err := parsers.ParseAdditives(languages, mensa)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	allergenMap, err := parsers.ParseAllergens(languages, mensa)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	// fmt.Printf("%+v\n", allergenMap
-	featureMap, err := parsers.ParseFeatures(languages, mensa)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	categoryMap, err := parsers.ParseMealCategory(mensa)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	for _, week := range *foodContent {
-		for _, food := range week.SpeiseplanGerichtData {
-			if food.Zusatzinformationen.MitarbeiterpreisDecimal2 == 0 || strings.Contains(food.SpeiseplanAdvancedGericht.RecipeName, "Preis pro") {
-				continue
-			}
-
-			category, err := parsers.ExtractCategories(food, categoryMap)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-
-			nutrients, err := parsers.ExtractNutrients(food)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-
-			additives, err := parsers.ExtractAdditives(food, additiveMap, languages)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-
-			allergens, err := parsers.ExtractAllergens(food, allergenMap, languages)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-
-			features, err := parsers.ExtractFeatures(food, featureMap, languages)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-
-			recipe := &payload.LocalRecipe{
-				Locales: []*repository.InsertLocaleParams{
-					{
-						Name:   food.SpeiseplanAdvancedGericht.RecipeName,
-						Locale: repository.EnumLocaleLocaleDe,
-					},
-					{
-						Name:   food.Zusatzinformationen.GerichtnameAlternative,
-						Locale: repository.EnumLocaleLocaleEn,
-					},
-				},
-				Recipe: payload.Recipe{
-					PriceStudents: &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
-					PriceGuests:   &food.Zusatzinformationen.GaestepreisDecimal2,
-					MensaProvider: 1,
-				},
-				Nutrients: nutrients,
-				Allergen:  allergens,
-				Additives: additives,
-				Features:  features,
-				Category:  category,
-			}
-
-			t, err := time.Parse(time.RFC3339, food.SpeiseplanAdvancedGericht.Date)
-			t = t.UTC()
-			if err != nil {
-				fmt.Println("Error parsing time:", err)
-				return
-			}
-
-			fmt.Printf("Recipe: %v\n", recipe)
-
-			recipeId, err := payload.InsertRecipe(recipe, t, mensa, ctx, conn)
-			if err != nil {
-				fmt.Println("Error inserting recipe:", err)
-				continue
-			}
-
-			recipes = append(recipes, &images.RecipeData{
-				ID:     recipeId,
-				Prompt: food.Zusatzinformationen.GerichtnameAlternative,
-			})
-		}
 	}
 }

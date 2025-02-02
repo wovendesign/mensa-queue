@@ -1,15 +1,39 @@
 package models
 
+import (
+	"mensa-queue/internal/repository"
+	"time"
+)
+
 type Recipe struct {
-	ID          string    // Unique ID for the recipe
-	Name        string    // Name of the recipe
-	Description string    // Description of the recipe
-	Ingredients []string  // List of ingredients
-	Servings    []Serving // List of servings for different canteens
+	ID              uint
+	PriceStudents   *float64
+	PriceEmployees  *float64
+	PriceGuests     *float64
+	MensaProviderID *int32
+	AIThumbnailID   uint
+	Localization    *RecipeLocalization
+	Serving         *Serving
+}
+
+type RecipeLocalization struct {
+	Locales   []*repository.InsertLocaleParams
+	Allergen  [][]*repository.InsertLocaleParams
+	Additives [][]*repository.InsertLocaleParams
+	Features  [][]*repository.InsertLocaleParams
+	Nutrients []*NutrientLocalization
+	Category  repository.EnumRecipesCategory
+}
+
+type NutrientLocalization struct {
+	Unit    string
+	Value   float64
+	Locales []*repository.InsertLocaleParams
 }
 
 type Serving struct {
-	CanteenID string  // ID of the canteen
-	Portion   string  // Portion size (e.g., "Small", "Large")
-	Quantity  float64 // Quantity of ingredients for this serving
+	MensaID *int32
+	Date    time.Time
 }
+
+type StringLocalization map[repository.EnumLocaleLocale]string

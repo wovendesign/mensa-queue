@@ -3,37 +3,20 @@ package payload
 import (
 	"context"
 	"fmt"
-	"mensa-queue/internal/repository"
-	"time"
-
 	"github.com/jackc/pgx/v5"
+	"mensa-queue/internal/repository"
+	"mensa-queue/models"
 )
 
-type LocalNutrient struct {
-	Unit    string
-	Value   float64
-	Locales []*repository.InsertLocaleParams
-}
-
-type LocalRecipe struct {
-	Locales   []*repository.InsertLocaleParams
-	Allergen  [][]*repository.InsertLocaleParams
-	Additives [][]*repository.InsertLocaleParams
-	Features  [][]*repository.InsertLocaleParams
-	Nutrients []*LocalNutrient
-	Recipe    Recipe
-	Category  repository.EnumRecipesCategory
-}
-
-func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
+func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (id *int32, err error) {
 	repo := repository.New(conn)
 
 	// Check if the recipe has "names"
-	if len(recipe.Locales) == 0 {
+	if len(recipe.Localization.Locales) == 0 {
 		return nil, fmt.Errorf("no locale in recipe")
 	}
 
-	localeIDs, err := insertLocales(recipe.Locales, repo, ctx)
+	localeIDs, err := insertLocales(recipe.Localization.Locales, repo, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +35,10 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 	if recipeID == nil {
 		// No ID of a linked recipe was found -> create new recipe
 		_recipeID, err := repo.InsertRecipe(ctx, repository.InsertRecipeParams{
-			PriceStudents:   recipe.Recipe.PriceStudents,
-			PriceEmployees:  recipe.Recipe.PriceEmployees,
-			PriceGuests:     recipe.Recipe.PriceGuests,
-			MensaProviderID: 1,
+			PriceStudents:   recipe.PriceStudents,
+			PriceEmployees:  recipe.PriceEmployees,
+			PriceGuests:     recipe.PriceGuests,
+			MensaProviderID: *recipe.MensaProviderID,
 			Category:        "main",
 		})
 		if err != nil {
@@ -79,9 +62,9 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 		// The Recipe already existed, updating the prices, in case something changed
 		err = repo.UpdateRecipePrices(ctx, repository.UpdateRecipePricesParams{
 			ID:             *recipeID,
-			PriceStudents:  recipe.Recipe.PriceStudents,
-			PriceEmployees: recipe.Recipe.PriceEmployees,
-			PriceGuests:    recipe.Recipe.PriceGuests,
+			PriceStudents:  recipe.PriceStudents,
+			PriceEmployees: recipe.PriceEmployees,
+			PriceGuests:    recipe.PriceGuests,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to update recipe: %v\n", err)
@@ -89,7 +72,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 	}
 
 	// Insert Additional Stuff like Nutrients, Allergens, Additives, etc
-	features := recipe.Features
+	features := recipe.Localization.Features
 	for _, feature := range features {
 		localeIDs, err := insertLocales(feature, repo, ctx)
 		if err != nil {
@@ -134,7 +117,7 @@ func InsertRecipe(recipe *LocalRecipe, date time.Time, mensa Mensa, ctx context.
 	// Create a Serving of the Recipe
 	// - A recipe has no dates or mensas attached to it
 	// This creates a new serving, if there wasn't one already
-	_, err = insertServing(mensa, err, repo, ctx, recipeID, date)
+	_, err = insertServing(repo, ctx, recipe.Serving, recipeID)
 	if err != nil {
 		return nil, err
 	}
@@ -164,22 +147,12 @@ func insertLocales(locales []*repository.InsertLocaleParams, repo *repository.Qu
 	return localeIDs, nil
 }
 
-func insertServing(mensa Mensa, err error, repo *repository.Queries, ctx context.Context, recipeID *int32, date time.Time) (*int32, error) {
-	mensaMap := map[Mensa]int32{
-		NeuesPalais:      1,
-		Griebnitzsee:     2,
-		Golm:             3,
-		Filmuniversitaet: 4,
-		FHP:              5,
-		Wildau:           6,
-		Brandenburg:      7,
-	}
-	mensaId := mensaMap[mensa]
+func insertServing(repo *repository.Queries, ctx context.Context, serving *models.Serving, recipeID *int32) (*int32, error) {
 
 	id, err := repo.InsertOrGetServing(ctx, repository.InsertOrGetServingParams{
 		RecipeID: *recipeID,
-		Date:     date,
-		MensaID:  &mensaId,
+		Date:     serving.Date,
+		MensaID:  serving.MensaID,
 	})
 	if err != nil {
 		fmt.Printf("Unable to insert serving: %v\n", err)
