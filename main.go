@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/joho/godotenv"
+	"log"
 	"mensa-queue/adapters"
 	stw_brandenburg_west "mensa-queue/adapters/stw-brandenburg-west"
 	"mensa-queue/internal/images"
@@ -17,6 +19,14 @@ import (
 var recipes images.Recipes
 
 func main() {
+	// Load .env file only in non-production environments
+	if os.Getenv("GO_ENV") != "production" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file: %v", err)
+		}
+	}
+	
 	ctx := context.Background()
 
 	providerAdapters := []adapters.Adapter{
