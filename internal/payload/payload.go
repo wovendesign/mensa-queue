@@ -30,8 +30,6 @@ func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (i
 	//	return nil, err
 	//}
 
-	fmt.Printf("recipeID: %v\n", recipeID)
-
 	if recipeID == nil {
 		// No ID of a linked recipe was found -> create new recipe
 		_recipeID, err := repo.InsertRecipe(ctx, repository.InsertRecipeParams{
@@ -59,6 +57,7 @@ func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (i
 			}
 		}
 	} else {
+		fmt.Printf("recipeID: %v\n", *recipeID)
 		// The Recipe already existed, updating the prices, in case something changed
 		err = repo.UpdateRecipePrices(ctx, repository.UpdateRecipePricesParams{
 			ID:             *recipeID,
