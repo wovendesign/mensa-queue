@@ -8,6 +8,7 @@ import (
 	"mensa-queue/internal/repository"
 	"mensa-queue/models"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -46,9 +47,18 @@ func (m *StwBrandenburgWestMensa) ParseMenu() ([]*models.Recipe, error) {
 
 	var recipes []*models.Recipe
 
+	var filterList = []string{
+		"Preis pro",
+		"Preis je",
+		"Schale",
+	}
+
 	for _, week := range foodContent {
 		for _, food := range week.SpeiseplanGerichtData {
-			if food.Zusatzinformationen.MitarbeiterpreisDecimal2 == 0 || strings.Contains(food.SpeiseplanAdvancedGericht.RecipeName, "Preis pro") {
+			if food.Zusatzinformationen.MitarbeiterpreisDecimal2 == 0 ||
+				slices.ContainsFunc(filterList, func(k string) bool {
+					return strings.Contains(food.SpeiseplanAdvancedGericht.RecipeName, k)
+				}) {
 				continue
 			}
 
