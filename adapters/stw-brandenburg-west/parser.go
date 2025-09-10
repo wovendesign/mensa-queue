@@ -91,7 +91,8 @@ func (m *StwBrandenburgWestMensa) ParseMenu() ([]*models.Recipe, error) {
 
 			recipe := models.Recipe{
 				PriceStudents:   &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
-				PriceGuests:     &food.Zusatzinformationen.GaestepreisDecimal2,
+				PriceEmployees:  &food.Zusatzinformationen.GaestepreisDecimal2,
+				PriceGuests:     &food.Zusatzinformationen.Price3Decimal2,
 				MensaProviderID: m.Provider.MensaHubID,
 				Localization: &models.RecipeLocalization{
 					Locales: []*repository.InsertLocaleParams{
