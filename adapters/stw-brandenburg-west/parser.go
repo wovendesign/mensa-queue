@@ -98,6 +98,7 @@ func (m *StwBrandenburgWestMensa) ParseMenu() ([]*models.Recipe, error) {
 				fmt.Println("Error parsing time:", err)
 				return nil, err
 			}
+			fmt.Println(t)
 
 			recipe := models.Recipe{
 				PriceStudents:   &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
