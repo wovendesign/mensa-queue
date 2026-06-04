@@ -12,6 +12,7 @@ type Recipe struct {
 	PriceGuests     *float64
 	MensaProviderID *int32
 	AIThumbnailID   uint
+	ImageURL        *string
 	Localization    *RecipeLocalization
 	Serving         *Serving
 }

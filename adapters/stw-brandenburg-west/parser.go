@@ -105,6 +105,7 @@ func (m *StwBrandenburgWestMensa) ParseMenu() ([]*models.Recipe, error) {
 				PriceEmployees:  &food.Zusatzinformationen.GaestepreisDecimal2,
 				PriceGuests:     &food.Zusatzinformationen.Price3Decimal2,
 				MensaProviderID: m.Provider.MensaHubID,
+				ImageURL:        food.Zusatzinformationen.GerichtImage,
 				Localization: &models.RecipeLocalization{
 					Locales: []*repository.InsertLocaleParams{
 						{
@@ -248,7 +249,7 @@ type Zusatzinformationen struct {
 	NwsalzDecimal1           float64          `json:"nwsalzDecimal1"`
 	NwbeDecimal2             *json.RawMessage `json:"nwbeDecimal2,omitempty"`
 	AllowFeedback            bool             `json:"allowFeedback"`
-	GerichtImage             *json.RawMessage `json:"gerichtImage,omitempty"`
+	GerichtImage             *string           `json:"gerichtImage,omitempty"`
 	Lieferanteninfo          *json.RawMessage `json:"lieferanteninfo,omitempty"`
 	LieferanteninfoLink      *json.RawMessage `json:"lieferanteninfoLink,omitempty"`
 	EdFaktorDecimal1         *json.RawMessage `json:"edFaktorDecimal1,omitempty"`

@@ -1,6 +1,9 @@
 -- name: FindAllRecipes :many
 SELECT * FROM recipes;
 
+-- name: FindRecipeByID :one
+SELECT * FROM recipes WHERE id = $1;
+
 -- name: InsertRecipe :one
 INSERT INTO recipes (price_students, price_employees, price_guests, mensa_provider_id, category)
 VALUES (sqlc.narg(price_students)::float8, sqlc.narg(price_employees)::float8, sqlc.narg(price_guests)::float8, $1, $2)

@@ -66,6 +66,8 @@ func main() {
 			panic(err)
 		}
 
+		repo := repository.New(conn)
+
 		for _, providerAdapter := range providerAdapters {
 			for _, mensa := range providerAdapter.GetAllMensas() {
 				if !mensa.IsRegistered() {
@@ -81,6 +83,18 @@ func main() {
 					if err != nil {
 						fmt.Println("Error inserting recipe:", err)
 						continue
+					}
+
+					if recipe.ImageURL != nil && *recipe.ImageURL != "" {
+						existingRecipe, err := repo.FindRecipeByID(ctx, *recipeId)
+						if err != nil {
+							fmt.Printf("Error verifying recipe after insert: %v\n", err)
+						} else if existingRecipe.AiThumbnailID == nil {
+							err = images.SaveMensaImage(*recipe.ImageURL, *recipeId, conn, ctx)
+							if err != nil {
+								fmt.Printf("Error saving mensa image: %v\n", err)
+							}
+						}
 					}
 
 					if mensa.AiGenerationEnabled() {

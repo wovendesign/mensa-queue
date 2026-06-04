@@ -13,6 +13,27 @@ const findAllRecipes = `-- name: FindAllRecipes :many
 SELECT id, ai_thumbnail_id, price_students, price_employees, price_guests, mensa_provider_id, updated_at, created_at, category FROM recipes
 `
 
+const findRecipeByID = `-- name: FindRecipeByID :one
+SELECT id, ai_thumbnail_id, price_students, price_employees, price_guests, mensa_provider_id, updated_at, created_at, category FROM recipes WHERE id = $1
+`
+
+func (q *Queries) FindRecipeByID(ctx context.Context, id int32) (Recipe, error) {
+	row := q.db.QueryRow(ctx, findRecipeByID, id)
+	var i Recipe
+	err := row.Scan(
+		&i.ID,
+		&i.AiThumbnailID,
+		&i.PriceStudents,
+		&i.PriceEmployees,
+		&i.PriceGuests,
+		&i.MensaProviderID,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.Category,
+	)
+	return i, err
+}
+
 func (q *Queries) FindAllRecipes(ctx context.Context) ([]Recipe, error) {
 	rows, err := q.db.Query(ctx, findAllRecipes)
 	if err != nil {
