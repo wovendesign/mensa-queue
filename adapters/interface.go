@@ -10,6 +10,7 @@ import (
 type Adapter interface {
 	RegisterAdapter(ctx context.Context, conn *pgx.Conn) (err error)
 	GetAllMensas() []Mensa
+	SyncOpeningTimes(ctx context.Context, conn *pgx.Conn) error
 }
 
 type Mensa interface {

@@ -53,6 +53,53 @@ func (ns NullEnumLocaleLocale) Value() (driver.Value, error) {
 	return string(ns.EnumLocaleLocale), nil
 }
 
+type EnumOpeningDayDay string
+
+const (
+	EnumOpeningDayDayMonday    EnumOpeningDayDay = "monday"
+	EnumOpeningDayDayTuesday   EnumOpeningDayDay = "tuesday"
+	EnumOpeningDayDayWednesday EnumOpeningDayDay = "wednesday"
+	EnumOpeningDayDayThursday  EnumOpeningDayDay = "thursday"
+	EnumOpeningDayDayFriday    EnumOpeningDayDay = "friday"
+	EnumOpeningDayDaySaturday  EnumOpeningDayDay = "saturday"
+	EnumOpeningDayDaySunday    EnumOpeningDayDay = "sunday"
+)
+
+func (e *EnumOpeningDayDay) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EnumOpeningDayDay(s)
+	case string:
+		*e = EnumOpeningDayDay(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EnumOpeningDayDay: %T", src)
+	}
+	return nil
+}
+
+type NullEnumOpeningDayDay struct {
+	EnumOpeningDayDay EnumOpeningDayDay `json:"enum_opening_day_day"`
+	Valid             bool              `json:"valid"` // Valid is true if EnumOpeningDayDay is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEnumOpeningDayDay) Scan(value interface{}) error {
+	if value == nil {
+		ns.EnumOpeningDayDay, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EnumOpeningDayDay.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEnumOpeningDayDay) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EnumOpeningDayDay), nil
+}
+
 type EnumRecipesCategory string
 
 const (
@@ -288,6 +335,14 @@ type MensaProvider struct {
 	Uuid        string             `json:"uuid"`
 }
 
+type MensaRel struct {
+	ID           int32  `json:"id"`
+	Order        *int32 `json:"order"`
+	ParentID     int32  `json:"parent_id"`
+	Path         string `json:"path"`
+	OpeningDayID *int32 `json:"opening_day_id"`
+}
+
 type Nutrient struct {
 	ID              int32              `json:"id"`
 	NutrientValueID *int32             `json:"nutrient_value_id"`
@@ -324,6 +379,17 @@ type NutrientValue struct {
 	Value     pgtype.Numeric     `json:"value"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type OpeningDay struct {
+	ID          int32              `json:"id"`
+	Day         EnumOpeningDayDay  `json:"day"`
+	OpeningFrom string             `json:"opening_from"`
+	OpeningTo   string             `json:"opening_to"`
+	ServiceFrom *string            `json:"service_from"`
+	ServiceTo   *string            `json:"service_to"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type PayloadLockedDocument struct {

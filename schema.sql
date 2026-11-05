@@ -87,6 +87,24 @@ CREATE TYPE public.enum_serving_time_day AS ENUM (
 
 ALTER TYPE public.enum_serving_time_day OWNER TO mensauser;
 
+
+--
+-- Name: enum_opening_day_day; Type: TYPE; Schema: public; Owner: mensauser
+--
+
+CREATE TYPE public.enum_opening_day_day AS ENUM (
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday'
+);
+
+
+ALTER TYPE public.enum_opening_day_day OWNER TO mensauser;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -2700,6 +2718,187 @@ ALTER TABLE ONLY public.user_image_uploads
 
 ALTER TABLE ONLY public.user_image_uploads
     ADD CONSTRAINT user_image_uploads_recipe_id_recipes_id_fk FOREIGN KEY (recipe_id) REFERENCES public.recipes(id) ON DELETE SET NULL;
+
+
+--
+-- Name: mensa_rels; Type: TABLE; Schema: public; Owner: mensauser
+--
+
+CREATE TABLE public.mensa_rels (
+    id integer NOT NULL,
+    "order" integer,
+    parent_id integer NOT NULL,
+    path character varying NOT NULL,
+    opening_day_id integer
+);
+
+
+ALTER TABLE public.mensa_rels OWNER TO mensauser;
+
+--
+-- Name: mensa_rels_id_seq; Type: SEQUENCE; Schema: public; Owner: mensauser
+--
+
+CREATE SEQUENCE public.mensa_rels_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mensa_rels_id_seq OWNER TO mensauser;
+
+--
+-- Name: mensa_rels_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: mensauser
+--
+
+ALTER SEQUENCE public.mensa_rels_id_seq OWNED BY public.mensa_rels.id;
+
+
+--
+-- Name: opening_day; Type: TABLE; Schema: public; Owner: mensauser
+--
+
+CREATE TABLE public.opening_day (
+    id integer NOT NULL,
+    day public.enum_opening_day_day NOT NULL,
+    opening_from character varying NOT NULL,
+    opening_to character varying NOT NULL,
+    service_from character varying,
+    service_to character varying,
+    updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
+    created_at timestamp(3) with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.opening_day OWNER TO mensauser;
+
+--
+-- Name: opening_day_id_seq; Type: SEQUENCE; Schema: public; Owner: mensauser
+--
+
+CREATE SEQUENCE public.opening_day_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.opening_day_id_seq OWNER TO mensauser;
+
+--
+-- Name: opening_day_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: mensauser
+--
+
+ALTER SEQUENCE public.opening_day_id_seq OWNED BY public.opening_day.id;
+
+
+--
+-- Name: mensa_rels id; Type: DEFAULT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.mensa_rels ALTER COLUMN id SET DEFAULT nextval('public.mensa_rels_id_seq'::regclass);
+
+
+--
+-- Name: opening_day id; Type: DEFAULT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.opening_day ALTER COLUMN id SET DEFAULT nextval('public.opening_day_id_seq'::regclass);
+
+
+--
+-- Name: mensa_rels mensa_rels_pkey; Type: CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.mensa_rels
+    ADD CONSTRAINT mensa_rels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: opening_day opening_day_pkey; Type: CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.opening_day
+    ADD CONSTRAINT opening_day_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: opening_day opening_day_times_check; Type: CHECK CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.opening_day
+    ADD CONSTRAINT opening_day_times_check CHECK (((opening_from ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND (opening_to ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND (service_from IS NULL OR (service_from ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)) AND (service_to IS NULL OR (service_to ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))));
+
+
+--
+-- Name: opening_day opening_day_unique; Type: CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.opening_day
+    ADD CONSTRAINT opening_day_unique UNIQUE NULLS NOT DISTINCT (day, opening_from, opening_to, service_from, service_to);
+
+
+--
+-- Name: mensa_rels_order_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX mensa_rels_order_idx ON public.mensa_rels USING btree ("order");
+
+
+--
+-- Name: mensa_rels_parent_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX mensa_rels_parent_idx ON public.mensa_rels USING btree (parent_id);
+
+
+--
+-- Name: mensa_rels_path_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX mensa_rels_path_idx ON public.mensa_rels USING btree (path);
+
+
+--
+-- Name: mensa_rels_opening_day_id_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX mensa_rels_opening_day_id_idx ON public.mensa_rels USING btree (opening_day_id);
+
+
+--
+-- Name: opening_day_created_at_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX opening_day_created_at_idx ON public.opening_day USING btree (created_at);
+
+
+--
+-- Name: opening_day_updated_at_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE INDEX opening_day_updated_at_idx ON public.opening_day USING btree (updated_at);
+
+
+--
+-- Name: mensa_rels mensa_rels_opening_day_fk; Type: FK CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.mensa_rels
+    ADD CONSTRAINT mensa_rels_opening_day_fk FOREIGN KEY (opening_day_id) REFERENCES public.opening_day(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mensa_rels mensa_rels_parent_fk; Type: FK CONSTRAINT; Schema: public; Owner: mensauser
+--
+
+ALTER TABLE ONLY public.mensa_rels
+    ADD CONSTRAINT mensa_rels_parent_fk FOREIGN KEY (parent_id) REFERENCES public.mensa(id) ON DELETE CASCADE;
 
 
 --
