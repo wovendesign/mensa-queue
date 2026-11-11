@@ -2,6 +2,7 @@ package payload
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"mensa-queue/internal/repository"
@@ -71,6 +72,21 @@ func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (i
 	}
 
 	// Insert Additional Stuff like Nutrients, Allergens, Additives, etc
+	err = persistNutrients(repo, conn, ctx, *recipeID, recipe.Localization.Nutrients)
+	if err != nil {
+		return nil, fmt.Errorf("unable to persist nutrients: %v\n", err)
+	}
+
+	err = persistAllergens(repo, ctx, *recipeID, recipe.Localization.Allergen)
+	if err != nil {
+		return nil, fmt.Errorf("unable to persist allergens: %v\n", err)
+	}
+
+	err = persistAdditives(repo, ctx, *recipeID, recipe.Localization.Additives)
+	if err != nil {
+		return nil, fmt.Errorf("unable to persist additives: %v\n", err)
+	}
+
 	features := recipe.Localization.Features
 	for _, feature := range features {
 		localeIDs, err := insertLocales(feature, repo, ctx)
@@ -158,4 +174,241 @@ func insertServing(repo *repository.Queries, ctx context.Context, serving *model
 		return nil, err
 	}
 	return &id, nil
+}
+
+// persistNutrients replaces the nutrients of a recipe with the parsed values.
+// SWP sends 0 (never null) for missing nutrition data, so only values > 0 are
+// stored; if everything is 0, the recipe ends up without nutrient rows.
+// Values, units and labels are global lookup tables and are deduped via their
+// unique indexes, so identical data across dishes shares rows. The recipe's
+// rows are only rewritten when the set of (label, value) pairs actually
+// changed, to avoid churn on repeated runs.
+func persistNutrients(repo *repository.Queries, conn *pgx.Conn, ctx context.Context, recipeID int32, nutrients []*models.NutrientLocalization) error {
+	type nutrientRow struct {
+		LabelID int32
+		ValueID int32
+	}
+
+	desired := make([]nutrientRow, 0, len(nutrients))
+	for _, nutrient := range nutrients {
+		if nutrient.Value <= 0 {
+			continue
+		}
+
+		labelID, err := findOrCreateNutrientLabel(repo, ctx, nutrient)
+		if err != nil {
+			return fmt.Errorf("unable to find or create nutrient label: %v\n", err)
+		}
+
+		valueID, err := repo.FindOrCreateNutrientValue(ctx, nutrient.Value)
+		if err != nil {
+			return fmt.Errorf("unable to find or create nutrient value: %v\n", err)
+		}
+
+		desired = append(desired, nutrientRow{LabelID: labelID, ValueID: valueID})
+	}
+
+	// Skip the rewrite if nothing changed
+	existingRows, err := repo.FindNutrientsForRecipe(ctx, &recipeID)
+	if err != nil {
+		return fmt.Errorf("unable to find existing nutrients: %v\n", err)
+	}
+	existing := make(map[[2]int32]struct{}, len(existingRows))
+	for _, row := range existingRows {
+		if row.NutrientLabelID == nil || row.NutrientValueID == nil {
+			continue
+		}
+		existing[[2]int32{*row.NutrientLabelID, *row.NutrientValueID}] = struct{}{}
+	}
+	if len(existing) == len(desired) {
+		unchanged := true
+		for _, row := range desired {
+			if _, ok := existing[[2]int32{row.LabelID, row.ValueID}]; !ok {
+				unchanged = false
+				break
+			}
+		}
+		if unchanged {
+			return nil
+		}
+	}
+
+	// Replace the recipe's nutrient rows atomically
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to begin transaction: %v\n", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txRepo := repository.New(tx)
+	err = txRepo.DeleteNutrientsForRecipe(ctx, &recipeID)
+	if err != nil {
+		return fmt.Errorf("unable to delete old nutrients: %v\n", err)
+	}
+
+	for _, row := range desired {
+		err = txRepo.InsertNutrientForRecipe(ctx, repository.InsertNutrientForRecipeParams{
+			RecipeID:        &recipeID,
+			NutrientValueID: &row.ValueID,
+			NutrientLabelID: &row.LabelID,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to insert nutrient: %v\n", err)
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
+// findOrCreateNutrientLabel resolves a nutrient label by its German name
+// (the unique index nutrient_labels_name_5_idx lives on (name, _locale)) and
+// creates the label with its localized names if it doesn't exist yet.
+func findOrCreateNutrientLabel(repo *repository.Queries, ctx context.Context, nutrient *models.NutrientLocalization) (int32, error) {
+	deName, ok := deName(nutrient.Locales)
+	if !ok {
+		return 0, fmt.Errorf("no german name for nutrient")
+	}
+
+	labelID, err := repo.FindNutrientLabelByDeName(ctx, deName)
+	if err == nil {
+		return labelID, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, err
+	}
+
+	// Not found -> create the label together with its unit and localized names
+	unitID, err := repo.FindOrCreateNutrientUnit(ctx, nutrient.Unit)
+	if err != nil {
+		return 0, fmt.Errorf("unable to find or create nutrient unit: %v\n", err)
+	}
+
+	labelID, err = repo.InsertNutrientLabel(ctx, unitID)
+	if err != nil {
+		return 0, fmt.Errorf("unable to insert nutrient label: %v\n", err)
+	}
+
+	for _, locale := range nutrient.Locales {
+		err = repo.InsertNutrientLabelLocale(ctx, repository.InsertNutrientLabelLocaleParams{
+			Name:     locale.Name,
+			Locale:   repository.Locales(locale.Locale),
+			ParentID: labelID,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("unable to insert nutrient label locale: %v\n", err)
+		}
+	}
+
+	return labelID, nil
+}
+
+// persistAllergens dedupes allergens by their German name and links each one
+// to the recipe idempotently via recipes_rels (path = 'allergens').
+func persistAllergens(repo *repository.Queries, ctx context.Context, recipeID int32, allergens [][]*repository.InsertLocaleParams) error {
+	for _, locales := range allergens {
+		allergenID, err := findOrCreateLocalizedEntity(
+			repo, ctx, locales,
+			repo.FindAllergenByDeName,
+			repo.InsertAllergen,
+			func(ctx context.Context, entityID int32, locale *repository.InsertLocaleParams) error {
+				return repo.InsertAllergenLocale(ctx, repository.InsertAllergenLocaleParams{
+					Name:     &locale.Name,
+					Locale:   repository.Locales(locale.Locale),
+					ParentID: entityID,
+				})
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		err = repo.AddAllergenToRecipe(ctx, repository.AddAllergenToRecipeParams{
+			RecipeID:    recipeID,
+			AllergensID: &allergenID,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to add allergen to recipe: %v\n", err)
+		}
+	}
+	return nil
+}
+
+// persistAdditives is the additive twin of persistAllergens.
+func persistAdditives(repo *repository.Queries, ctx context.Context, recipeID int32, additives [][]*repository.InsertLocaleParams) error {
+	for _, locales := range additives {
+		additiveID, err := findOrCreateLocalizedEntity(
+			repo, ctx, locales,
+			repo.FindAdditiveByDeName,
+			repo.InsertAdditive,
+			func(ctx context.Context, entityID int32, locale *repository.InsertLocaleParams) error {
+				return repo.InsertAdditiveLocale(ctx, repository.InsertAdditiveLocaleParams{
+					Name:     &locale.Name,
+					Locale:   repository.Locales(locale.Locale),
+					ParentID: entityID,
+				})
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		err = repo.AddAdditiveToRecipe(ctx, repository.AddAdditiveToRecipeParams{
+			RecipeID:    recipeID,
+			AdditivesID: &additiveID,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to add additive to recipe: %v\n", err)
+		}
+	}
+	return nil
+}
+
+// findOrCreateLocalizedEntity resolves an allergen/additive by its German
+// name. Those lookup tables have no unique index on the name, so dedupe works
+// by find-then-insert (a single worker runs against the DB, so there is no
+// race to guard against).
+func findOrCreateLocalizedEntity(
+	repo *repository.Queries,
+	ctx context.Context,
+	locales []*repository.InsertLocaleParams,
+	findByDeName func(context.Context, *string) (int32, error),
+	insertEntity func(context.Context) (int32, error),
+	insertLocale func(context.Context, int32, *repository.InsertLocaleParams) error,
+) (int32, error) {
+	de, ok := deName(locales)
+	if !ok {
+		return 0, fmt.Errorf("no german name for entity")
+	}
+
+	entityID, err := findByDeName(ctx, &de)
+	if err == nil {
+		return entityID, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, err
+	}
+
+	entityID, err = insertEntity(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("unable to insert entity: %v\n", err)
+	}
+
+	for _, locale := range locales {
+		err = insertLocale(ctx, entityID, locale)
+		if err != nil {
+			return 0, fmt.Errorf("unable to insert entity locale: %v\n", err)
+		}
+	}
+
+	return entityID, nil
+}
+
+// deName returns the German name of a set of localized names.
+func deName(locales []*repository.InsertLocaleParams) (string, bool) {
+	for _, locale := range locales {
+		if locale.Locale == repository.EnumLocaleLocaleDe {
+			return locale.Name, true
+		}
+	}
+	return "", false
 }
