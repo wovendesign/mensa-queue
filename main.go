@@ -69,6 +69,12 @@ func main() {
 		repo := repository.New(conn)
 
 		for _, providerAdapter := range providerAdapters {
+			// Opening times change rarely and are stored as shared day rows,
+			// so this is a cheap single request for the whole provider
+			if err := providerAdapter.SyncOpeningTimes(ctx, conn); err != nil {
+				fmt.Println("Error syncing opening times:", err)
+			}
+
 			for _, mensa := range providerAdapter.GetAllMensas() {
 				if !mensa.IsRegistered() {
 					continue
