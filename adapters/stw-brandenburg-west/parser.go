@@ -101,6 +101,7 @@ func (m *StwBrandenburgWestMensa) ParseMenu() ([]*models.Recipe, error) {
 			fmt.Println(t)
 
 			recipe := models.Recipe{
+				SourceID:        sourceID(food.SpeiseplanAdvancedGericht.ID),
 				PriceStudents:   &food.Zusatzinformationen.MitarbeiterpreisDecimal2,
 				PriceEmployees:  &food.Zusatzinformationen.GaestepreisDecimal2,
 				PriceGuests:     &food.Zusatzinformationen.Price3Decimal2,
@@ -145,6 +146,10 @@ const (
 	CategoryModel  Model = "mealCategory"
 )
 
+func sourceID(dishID int64) string {
+	return fmt.Sprintf("swt:%d", dishID)
+}
+
 func sendRequestToSWT(model Model, stwMensaId *int32, languageType repository.EnumLocaleLocale) ([]byte, error) {
 	client := &http.Client{}
 	url := "https://swp.webspeiseplan.de/index.php?token=55ed21609e26bbf68ba2b19390bf7961"
@@ -172,7 +177,6 @@ func sendRequestToSWT(model Model, stwMensaId *int32, languageType repository.En
 		err := Body.Close()
 		if err != nil {
 			panic(err)
-			return
 		}
 	}(resp.Body)
 
@@ -249,7 +253,7 @@ type Zusatzinformationen struct {
 	NwsalzDecimal1           float64          `json:"nwsalzDecimal1"`
 	NwbeDecimal2             *json.RawMessage `json:"nwbeDecimal2,omitempty"`
 	AllowFeedback            bool             `json:"allowFeedback"`
-	GerichtImage             *string           `json:"gerichtImage,omitempty"`
+	GerichtImage             *string          `json:"gerichtImage,omitempty"`
 	Lieferanteninfo          *json.RawMessage `json:"lieferanteninfo,omitempty"`
 	LieferanteninfoLink      *json.RawMessage `json:"lieferanteninfoLink,omitempty"`
 	EdFaktorDecimal1         *json.RawMessage `json:"edFaktorDecimal1,omitempty"`
