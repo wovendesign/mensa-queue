@@ -2,7 +2,9 @@ package payload
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	"github.com/jackc/pgx/v5"
 	"mensa-queue/internal/repository"
 	"mensa-queue/models"
@@ -16,19 +18,64 @@ func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (i
 		return nil, fmt.Errorf("no locale in recipe")
 	}
 
+	// The upstream dish ID is the primary identity of a recipe and survives
+	// renames of the German dish name.
+	var recipeID *int32
+	if recipe.SourceID != "" {
+		sourceRecipeID, err := repo.FindRecipeBySourceID(ctx, recipe.SourceID)
+		switch {
+		case err == nil:
+			recipeID = &sourceRecipeID
+		case errors.Is(err, pgx.ErrNoRows):
+			// No recipe with this source ID yet -> fall back to the name lookup.
+		default:
+			return nil, fmt.Errorf("unable to find recipe by source ID: %w", err)
+		}
+	}
+
+	// A found recipe may have been renamed upstream. Rename the linked German
+	// locale in place before inserting locales, so insertLocales reuses that
+	// row instead of creating a second German locale for the same recipe.
+	if recipeID != nil {
+		linkedLocales, err := repo.GetRecipeLocaleIDs(ctx, *recipeID)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get recipe locales: %w", err)
+		}
+		newGermanName := recipe.Localization.Locales[0].Name
+		for _, linkedLocale := range linkedLocales {
+			if linkedLocale.Locale != repository.EnumLocaleLocaleDe {
+				continue
+			}
+			if linkedLocale.Name != newGermanName {
+				if err := repo.UpdateLocaleName(ctx, repository.UpdateLocaleNameParams{
+					ID:   linkedLocale.ID,
+					Name: newGermanName,
+				}); err != nil {
+					return nil, fmt.Errorf("unable to update recipe locale name: %w", err)
+				}
+			}
+			break
+		}
+	}
+
 	localeIDs, err := insertLocales(recipe.Localization.Locales, repo, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if the locale has a Recipe linked to it
-	// This is e.g. not the case if the Locales were newly created
-	recipeID, _ := repo.FindRecipeByLocale(ctx, localeIDs[0])
-	//if err != nil {
-	//	fmt.Printf("error finding recipe: %v\n", err)
-	//	//err = nil
-	//	return nil, err
-	//}
+	// Legacy recipes were written before source IDs existed: find them by the
+	// German name's linked locale and backfill the source ID.
+	if recipeID == nil {
+		recipeID, _ = repo.FindRecipeByLocale(ctx, localeIDs[0])
+		if recipeID != nil && recipe.SourceID != "" {
+			if err := repo.SetRecipeSourceID(ctx, repository.SetRecipeSourceIDParams{
+				ID:       *recipeID,
+				SourceID: recipe.SourceID,
+			}); err != nil {
+				return nil, fmt.Errorf("unable to set recipe source ID: %w", err)
+			}
+		}
+	}
 
 	if recipeID == nil {
 		// No ID of a linked recipe was found -> create new recipe
@@ -38,6 +85,7 @@ func InsertRecipe(recipe *models.Recipe, ctx context.Context, conn *pgx.Conn) (i
 			PriceGuests:     recipe.PriceGuests,
 			MensaProviderID: *recipe.MensaProviderID,
 			Category:        "main",
+			SourceID:        recipe.SourceID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert recipe: %v\n", err)

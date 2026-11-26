@@ -7,6 +7,7 @@ import (
 
 type Recipe struct {
 	ID              uint
+	SourceID        string
 	PriceStudents   *float64
 	PriceEmployees  *float64
 	PriceGuests     *float64

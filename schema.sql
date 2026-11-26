@@ -909,7 +909,8 @@ CREATE TABLE public.recipes (
     mensa_provider_id integer NOT NULL,
     updated_at timestamp(3) with time zone DEFAULT now() NOT NULL,
     created_at timestamp(3) with time zone DEFAULT now() NOT NULL,
-    category public.enum_recipes_category DEFAULT 'main'::public.enum_recipes_category NOT NULL
+    category public.enum_recipes_category DEFAULT 'main'::public.enum_recipes_category NOT NULL,
+    source_id text
 );
 
 
@@ -2213,6 +2214,13 @@ CREATE INDEX recipes_rels_parent_idx ON public.recipes_rels USING btree (parent_
 --
 
 CREATE INDEX recipes_rels_path_idx ON public.recipes_rels USING btree (path);
+
+
+--
+-- Name: recipes_source_id_5_idx; Type: INDEX; Schema: public; Owner: mensauser
+--
+
+CREATE UNIQUE INDEX recipes_source_id_5_idx ON public.recipes USING btree (source_id);
 
 
 --
